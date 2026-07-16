@@ -1,0 +1,31 @@
+{
+  "short_name": "UG Sports",
+  "name": "Uasin Gishu Sports App",
+  "description": "Digital management portal for Uasin Gishu County sports tournaments, fixtures, and results.",
+  "icons": [
+    {
+      "src": "/static/UG_LOGO.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/UG_LOGO.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/UG_LOGO.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#FFFFFF",
+  "theme_color": "#0C2417",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "categories": ["sports", "productivity"]
+}
