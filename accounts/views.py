@@ -735,7 +735,7 @@ def TeamCreateView(request, phase_pk):
         log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
         phase_entry = PhaseEntry.objects.create(phase=phase, team=team, registered_by=request.user)
         log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
-        return redirect('ward_dashboard')
+        return redirect('phase_detail',pk=phase.pk)
 
     else:
         form = TeamForm(initial={'ward': phase.ward})
