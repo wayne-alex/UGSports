@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ fixture.home_team.name }} vs {{ fixture.away_team.name }} — UG Sports</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --pitch: #1B4332; --pitch-dark: #0C2417; --pitch-light: #2D5A45;
+            --ochre: #D98A3D; --ochre-deep: #B36B23; --rust: #C1440E;
+            --bg: #F8FAFC; --card: #FFFFFF; --ink: #0F172A;
+            --ink-soft: #64748B; --ink-faint: #94A3B8; --line: #E2E8F0;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+        h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+        .page { max-width: 720px; margin: 0 auto; }
+
+        .fx-hero {
+            position: relative;
+            padding: 20px 24px 30px;
+            background: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.055) 1px, transparent 1.6px),
+                        linear-gradient(150deg, var(--pitch-light) 0%, var(--pitch) 45%, var(--pitch-dark) 100%);
+            background-size: 14px 14px, cover;
+            color: #fff;
+        }
+        .fx-back {
+            display: inline-flex; align-items: center; gap: 3px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.16);
+            color: #fff; font-weight: 600; font-size: 0.82rem;
+            padding: 7px 14px 7px 8px; border-radius: 99px;
+            cursor: pointer; text-decoration: none;
+        }
+        .fx-back svg { width: 17px; height: 17px; stroke: #fff; stroke-width: 2.3; fill: none; vertical-align: middle; }
+
+        .fx-status-row { text-align: center; margin: 16px 0 6px; }
+        .fx-status-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+            padding: 5px 14px; border-radius: 99px;
+            background: rgba(255,255,255,0.12);
+        }
+        .fx-status-badge.live { background: rgba(255,107,74,0.2); color: #FFD9C7; }
+        .fx-live-dot { width: 6px; height: 6px; border-radius: 50%; background: #FF6B4A; animation: pulse 1.4s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+        .fx-matchup {
+            display: flex; align-items: center; justify-content: center; gap: 18px;
+            margin-top: 18px;
+        }
+        .fx-team-block { flex: 1; text-align: center; max-width: 140px; }
+        .fx-team-crest {
+            width: 56px; height: 56px; margin: 0 auto 10px;
+            border-radius: 14px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(217,138,61,0.5);
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 1.2rem;
+        }
+        .fx-team-name { font-size: 0.85rem; font-weight: 700; line-height: 1.3; }
+        .fx-score-block { text-align: center; padding: 0 6px; }
+        .fx-score { font-family: 'Space Grotesk', sans-serif; font-size: 2.1rem; font-weight: 800; }
+        .fx-score-sep { color: rgba(255,255,255,0.4); }
+        .fx-vs { font-size: 0.75rem; color: rgba(255,255,255,0.6); font-weight: 700; margin-top: 2px; }
+
+        .fx-meta-row {
+            display: flex; justify-content: center; gap: 20px;
+            margin-top: 20px; font-size: 0.74rem; color: rgba(255,255,255,0.65);
+        }
+        .fx-meta-item { display: flex; align-items: center; gap: 5px; }
+        .fx-meta-item svg { width: 13px; height: 13px; stroke: rgba(255,255,255,0.65); stroke-width: 2.2; fill: none; }
+
+        .fx-nav {
+            display: flex; gap: 2px; overflow-x: auto;
+            padding: 4px 20px 0;
+            background: rgba(248,250,252,0.94);
+            border-bottom: 1px solid var(--line);
+            position: sticky; top: 0; z-index: 10;
+            scrollbar-width: none;
+        }
+        .fx-nav::-webkit-scrollbar { display: none; }
+        .fx-nav-item {
+            flex-shrink: 0; padding: 11px 15px; font-size: 0.83rem; font-weight: 600;
+            color: var(--ink-soft); background: none; border: none; cursor: pointer;
+            border-bottom: 2.5px solid transparent;
+        }
+        .fx-nav-item.active { color: var(--pitch); border-bottom-color: var(--ochre); }
+
+        .fx-body { padding: 22px 20px 60px; }
+        .fx-pane { display: none; }
+        .fx-pane.active { display: block; animation: paneIn 0.28s ease; }
+        @keyframes paneIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        .fx-card {
+            background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+            margin-bottom: 14px; overflow: hidden;
+        }
+        .fx-card-title {
+            padding: 11px 18px; background: #FAFBFC; border-bottom: 1px solid var(--line);
+            font-size: 0.66rem; font-weight: 700; color: var(--pitch);
+            text-transform: uppercase; letter-spacing: 0.6px;
+        }
+        .fx-info-row {
+            display: flex; justify-content: space-between; padding: 13px 18px;
+            border-bottom: 1px solid var(--line); font-size: 0.83rem;
+        }
+        .fx-info-row:last-child { border-bottom: none; }
+        .fx-info-row .k { color: var(--ink-soft); font-weight: 600; }
+        .fx-info-row .v { font-weight: 600; }
+
+        .fx-squad-row {
+            display: flex; align-items: center; gap: 12px; padding: 11px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+        .fx-squad-row:last-child { border-bottom: none; }
+        .fx-squad-jersey {
+            width: 26px; height: 26px; border-radius: 7px; background: #F1F5F9;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; font-weight: 700; color: var(--pitch);
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .fx-squad-name { font-size: 0.82rem; font-weight: 600; flex: 1; }
+        .fx-squad-pos { font-size: 0.68rem; color: var(--ink-soft); }
+
+        .fx-goal-row {
+            display: flex; align-items: center; gap: 12px; padding: 12px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+        .fx-goal-row:last-child { border-bottom: none; }
+        .fx-goal-minute {
+            font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; font-weight: 700;
+            color: var(--pitch); width: 34px; flex-shrink: 0;
+        }
+        .fx-goal-icon {
+            width: 26px; height: 26px; border-radius: 50%; background: #E9EEF1;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .fx-goal-icon svg { width: 13px; height: 13px; stroke: var(--pitch); stroke-width: 2.2; fill: none; }
+        .fx-goal-scorer { font-size: 0.83rem; font-weight: 600; }
+        .fx-goal-assist { font-size: 0.72rem; color: var(--ink-soft); }
+        .fx-goal-team { margin-left: auto; font-size: 0.7rem; color: var(--ink-faint); font-weight: 600; }
+
+        .fx-h2h-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 18px; border-bottom: 1px solid var(--line); font-size: 0.8rem;
+        }
+        .fx-h2h-row:last-child { border-bottom: none; }
+        .fx-h2h-date { color: var(--ink-faint); font-size: 0.7rem; }
+        .fx-h2h-score { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--pitch); }
+
+        .empty-state { padding: 40px 22px; text-align: center; }
+        .empty-state p { font-size: 0.82rem; color: var(--ink-soft); max-width: 260px; margin: 0 auto; line-height: 1.6; }
+    </style>
+</head>
+<body>
+
+<div class="page">
+    <div class="fx-hero">
+        <a class="fx-back" href="javascript:history.back()">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+        </a>
+
+        <div class="fx-status-row">
+            <span class="fx-status-badge {% if fixture.status == 'live' %}live{% endif %}">
+                {% if fixture.status == 'live' %}<span class="fx-live-dot"></span>Live
+                {% elif fixture.status == 'completed' %}Full Time
+                {% elif fixture.status == 'postponed' %}Postponed
+                {% elif fixture.status == 'cancelled' %}Cancelled
+                {% else %}{{ fixture.kickoff_at|date:"D, d M · H:i"|default:"Kickoff TBC" }}
+                {% endif %}
+            </span>
+        </div>
+
+        <div class="fx-matchup">
+            <div class="fx-team-block">
+                <div class="fx-team-crest">{{ fixture.home_team.name|slice:":2"|upper }}</div>
+                <div class="fx-team-name">{{ fixture.home_team.name }}</div>
+            </div>
+            <div class="fx-score-block">
+                {% if result %}
+                    <div class="fx-score mono">{{ result.home_score }} <span class="fx-score-sep">–</span> {{ result.away_score }}</div>
+                {% else %}
+                    <div class="fx-vs">VS</div>
+                {% endif %}
+            </div>
+            <div class="fx-team-block">
+                <div class="fx-team-crest">{{ fixture.away_team.name|slice:":2"|upper }}</div>
+                <div class="fx-team-name">{{ fixture.away_team.name }}</div>
+            </div>
+        </div>
+
+        <div class="fx-meta-row">
+            <div class="fx-meta-item">
+                <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                {{ fixture.venue|default:"Venue TBC" }}
+            </div>
+            <div class="fx-meta-item">
+                <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 6v6l4 2"/></svg>
+                {{ fixture.phase_sport.sport.name }} · R{{ fixture.round_number }}
+            </div>
+        </div>
+    </div>
+
+    <nav class="fx-nav" id="fx-nav">
+        <button class="fx-nav-item active" data-tab="overview">Overview</button>
+        <button class="fx-nav-item" data-tab="lineups">Lineups</button>
+        <button class="fx-nav-item" data-tab="events">Goals</button>
+        <button class="fx-nav-item" data-tab="h2h">Head to Head</button>
+    </nav>
+
+    <div class="fx-body">
+        <div class="fx-pane active" id="fx-pane-overview">
+            <div class="fx-card">
+                <div class="fx-card-title">Match Info</div>
+                <div class="fx-info-row"><span class="k">Competition</span><span class="v">{{ fixture.phase_sport.phase.tournament.name }}</span></div>
+                <div class="fx-info-row"><span class="k">Stage</span><span class="v">{{ fixture.phase_sport.phase.get_stage_display }}{% if fixture.phase_sport.phase.scope_label %} · {{ fixture.phase_sport.phase.scope_label }}{% endif %}</span></div>
+                {% if fixture.group %}<div class="fx-info-row"><span class="k">Group</span><span class="v">Group {{ fixture.group.name }}</span></div>{% endif %}
+                <div class="fx-info-row"><span class="k">Round</span><span class="v">Round {{ fixture.round_number }}{% if fixture.leg > 1 %} · Leg {{ fixture.leg }}{% endif %}</span></div>
+                <div class="fx-info-row"><span class="k">Kickoff</span><span class="v">{{ fixture.kickoff_at|date:"D, d M Y · H:i"|default:"TBC" }}</span></div>
+                <div class="fx-info-row"><span class="k">Venue</span><span class="v">{{ fixture.venue|default:"TBC" }}</span></div>
+                <div class="fx-info-row"><span class="k">Status</span><span class="v">{{ fixture.get_status_display }}</span></div>
+                {% if result and result.verified %}
+                <div class="fx-info-row"><span class="k">Result Verified</span><span class="v">Yes</span></div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="fx-pane" id="fx-pane-lineups">
+            <div class="fx-card">
+                <div class="fx-card-title">{{ fixture.home_team.name }} Squad</div>
+                {% for p in home_squad %}
+                <div class="fx-squad-row">
+                    <div class="fx-squad-jersey">#{{ p.jersey_number }}</div>
+                    <div class="fx-squad-name">{{ p.name }}</div>
+                    <div class="fx-squad-pos">{{ p.get_position_display|default:"—" }}</div>
+                </div>
+                {% empty %}
+                <div class="empty-state"><p>No players registered for this team.</p></div>
+                {% endfor %}
+            </div>
+            <div class="fx-card">
+                <div class="fx-card-title">{{ fixture.away_team.name }} Squad</div>
+                {% for p in away_squad %}
+                <div class="fx-squad-row">
+                    <div class="fx-squad-jersey">#{{ p.jersey_number }}</div>
+                    <div class="fx-squad-name">{{ p.name }}</div>
+                    <div class="fx-squad-pos">{{ p.get_position_display|default:"—" }}</div>
+                </div>
+                {% empty %}
+                <div class="empty-state"><p>No players registered for this team.</p></div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="fx-pane" id="fx-pane-events">
+            <div class="fx-card">
+                <div class="fx-card-title">Goals</div>
+                {% for g in goals %}
+                <div class="fx-goal-row">
+                    <div class="fx-goal-minute">{% if g.minute %}{{ g.minute }}'{% else %}—{% endif %}</div>
+                    <div class="fx-goal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="9"/>
+  <path d="M12 3v4.5M12 21v-4.5M3 12h4.5M21 12h-4.5"/>
+  <path d="M7.5 7.5l3 1.5 3-1.5M7.5 16.5l3-1.5 3 1.5"/>
+</svg></div>
+                    <div>
+                        <div class="fx-goal-scorer">{{ g.scorer.name }}</div>
+                        {% if g.assisted_by %}<div class="fx-goal-assist">Assist: {{ g.assisted_by.name }}</div>{% endif %}
+                    </div>
+                    <div class="fx-goal-team">{{ g.scorer.team.name }}</div>
+                </div>
+                {% empty %}
+                <div class="empty-state"><p>No goals recorded for this match yet.</p></div>
+                {% endfor %}
+            </div>
+            <div class="fx-card">
+                <div class="fx-card-title">Cards</div>
+                {% for c in cards %}
+                <div class="fx-goal-row">
+                    <div class="fx-goal-minute">{% if c.minute %}{{ c.minute }}'{% else %}—{% endif %}</div>
+                    <div class="fx-goal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Change fill="currentColor" to fill="#FFD700" for Yellow or fill="#FF3333" for Red -->
+  <rect x="6" y="3" width="12" height="18" rx="2" transform="rotate(10 12 12)" fill="currentColor"/>
+</svg>
+</svg></div>
+                    <div>
+                        <div class="fx-goal-scorer">{{ c.player.name }}</div>
+                        <div class="fx-goal-assist">Card: {{ c.card_type }}</div>
+
+                    </div>
+                    <div class="fx-goal-team">{{ c.player.team.name }}</div>
+                </div>
+                {% empty %}
+                <div class="empty-state"><p>No cards recorded for this match yet.</p></div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="fx-pane" id="fx-pane-h2h">
+            <div class="fx-card">
+                <div class="fx-card-title">Previous Meetings</div>
+                {% for f in h2h %}
+                <div class="fx-h2h-row">
+                    <div>
+                        <div>{{ f.home_team.name }} vs {{ f.away_team.name }}</div>
+                        <div class="fx-h2h-date">{{ f.kickoff_at|date:"d M Y"|default:"Date unknown" }}</div>
+                    </div>
+                    <div class="fx-h2h-score">{{ f.result.home_score }}–{{ f.result.away_score }}</div>
+                </div>
+                {% empty %}
+                <div class="empty-state"><p>These teams haven't met before, or no prior results are recorded.</p></div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const nav = document.getElementById('fx-nav');
+        nav.querySelectorAll('.fx-nav-item').forEach(btn => {
+            btn.addEventListener('click', () => {
+                nav.querySelectorAll('.fx-nav-item').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                document.querySelectorAll('.fx-pane').forEach(p => p.classList.remove('active'));
+                document.getElementById('fx-pane-' + btn.dataset.tab).classList.add('active');
+            });
+        });
+    })();
+</script>
+</body>
+</html>

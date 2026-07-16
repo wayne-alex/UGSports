@@ -1,0 +1,31 @@
+{% extends "ward/wardadmin_base.html" %}
+{% block title %}Edit Match ? UG Sports Admin{% endblock %}
+{% block page_title %}Reschedule Match{% endblock %}
+
+{% block content %}
+<div class="group" style="padding:24px;">
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Match</label>
+                <input type="text" value="{{ fixture.home_team }} vs {{ fixture.away_team }}" disabled class="form-control">
+            </div>
+            <div class="form-field-box">
+                <label>Kickoff Time</label>{{ form.kickoff_at }}
+            </div>
+            <div class="form-field-box">
+                <label>Venue</label>{{ form.venue }}
+            </div>
+            <div class="form-field-box">
+                <label>Status</label>{{ form.status }}
+            </div>
+        </div>
+        
+        <div class="form-actions" style="margin-top:16px;">
+            <a href="{% url 'ward_tournament'  %}" class="btn-ghost">Cancel</a>
+            <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

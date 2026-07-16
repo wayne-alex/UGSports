@@ -1,0 +1,247 @@
+{% extends "ward/wardadmin_base.html" %}
+
+{% block title %}{{ team.name }} — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ team.sport.name }}{% endblock %}
+{% block page_title %}{{ team.name }}{% endblock %}
+
+{% block header_actions %}
+{% if phase %}
+<a href="{% url 'ward_tournament'  %}" class="btn-ghost">
+    <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;stroke-width:2.2;margin-right:4px;vertical-align:-2px;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Back to {{ phase.scope_label }}
+</a>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+
+<!-- ============= TEAM IDENTITY ============= -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <h3>Sport</h3>
+        <p style="font-size: 1.1rem;">{{ team.sport.name }}</p>
+    </div>
+    <div class="metric-card">
+        <h3>Ward</h3>
+        <p style="font-size: 1.1rem;">{{ team.ward.name }}</p>
+    </div>
+    <div class="metric-card">
+        <h3>Squad</h3>
+        <p>{{ players|length }}<span>player{{ players|length|pluralize }}</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Goals Scored</h3>
+        <p>{{ squad_goals }}<span>across all fixtures</span></p>
+    </div>
+</div>
+
+<div class="group-header-row" style="margin-top:28px;">
+    <h3 class="group-header">Team Details</h3>
+    <button type="button" class="btn-ghost" onclick="toggleFormPanel('edit-team-panel')">Edit</button>
+</div>
+
+<div class="inline-form-panel" id="edit-team-panel">
+    <div class="form-panel-title">Edit Team</div>
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="edit_team">
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Team Name</label>
+                <input type="text" name="name" value="{{ team.name }}" required>
+            </div>
+            <div class="form-field-box">
+                <label>Home Ground</label>
+                <input type="text" name="home_ground" value="{{ team.home_ground }}">
+            </div>
+            <div class="form-field-box">
+                <label>Coach Name</label>
+                <input type="text" name="coach_name" value="{{ team.coach_name }}">
+            </div>
+            <div class="form-field-box">
+                <label>Coach Phone</label>
+                <input type="text" name="coach_phone" value="{{ team.coach_phone }}">
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn-ghost" onclick="toggleFormPanel('edit-team-panel')">Cancel</button>
+            <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+
+<div class="group">
+    <div class="group-row">
+        <div class="row-left">
+            <div>
+                <div class="cell-main">Home Ground</div>
+                <div class="cell-sub">{{ team.home_ground|default:"Not set" }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="group-row">
+        <div class="row-left">
+            <div>
+                <div class="cell-main">Coach</div>
+                <div class="cell-sub">
+                    {{ team.coach_name|default:"Not set" }}
+                    {% if team.coach_phone %} &middot; {{ team.coach_phone }}{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============= WORKSPACE TABS ============= -->
+<div class="filter-pills" id="workspace-tab-bar" style="margin-top: 24px;">
+    <button type="button" class="filter-pill active" data-pane="squad" onclick="switchWorkspaceTab('squad', this)">Squad</button>
+    <button type="button" class="filter-pill" data-pane="fixtures" onclick="switchWorkspaceTab('fixtures', this)">Team Fixtures</button>
+</div>
+
+<!-- ============= SQUAD PANE ============= -->
+<div class="workspace-pane" id="pane-squad">
+    <div class="group-header-row">
+        <h3 class="group-header">Squad Roster</h3>
+        <div style="display:flex; gap:8px;">
+            <button type="button" class="btn-ghost" onclick="toggleFormPanel('bulk-add-panel')">Bulk Add (CSV)</button>
+            <button type="button" class="btn-ghost" onclick="toggleFormPanel('add-player-panel')">+ Add Player</button>
+        </div>
+    </div>
+
+    <div class="inline-form-panel" id="bulk-add-panel">
+        <div class="form-panel-title">Bulk Add Players via CSV</div>
+        <p style="font-size:0.82rem; color:var(--ink-soft); margin-bottom:14px; line-height:1.5;">
+            Upload a CSV with a header row containing <code>name</code> and <code>jersey_number</code>
+            (required), plus optional <code>position</code> (GK, DEF, MID, ATT) and <code>national_id</code> columns.
+            Rows with missing data, invalid jersey numbers, or duplicate jersey numbers are skipped and reported —
+            the rest of the file still imports.
+        </p>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="bulk_add_players">
+            <div class="form-field-box">
+                <label>CSV File</label>
+                <input type="file" name="csv_file" accept=".csv" required>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-ghost" onclick="toggleFormPanel('bulk-add-panel')">Cancel</button>
+                <button type="submit" class="btn-primary">Upload &amp; Add Players</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="inline-form-panel" id="add-player-panel">
+        <div class="form-panel-title">Add Player</div>
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="add_player">
+            <div class="form-grid-columns">
+                <div class="form-field-box">
+                    <label>Player Name</label>
+                    <input type="text" name="player_name" required>
+                </div>
+                <div class="form-field-box">
+                    <label>Jersey Number</label>
+                    <input type="number" name="jersey_number" min="1" required>
+                </div>
+                <div class="form-field-box">
+                    <label>Position</label>
+                    <select name="position">
+                        <option value="">— Optional —</option>
+                        {% for value, label in positions %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-ghost" onclick="toggleFormPanel('add-player-panel')">Cancel</button>
+                <button type="submit" class="btn-primary">Add Player</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="group">
+        {% for player in players %}
+        <div class="group-row">
+            <div class="row-left">
+                <div class="avatar-chip mono">{{ player.jersey_number }}</div>
+                <div>
+                    <div class="cell-main">{{ player.name }}</div>
+                    <div class="cell-sub">
+                        {% if player.position %}{{ player.get_position_display }} &middot; {% endif %}
+                        {{ player.goals }} goal{{ player.goals|pluralize }}
+                    </div>
+                </div>
+            </div>
+            <div class="row-right">
+                <form method="post" onsubmit="return confirm('Remove {{ player.name }} from the roster?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="remove_player">
+                    <input type="hidden" name="player_id" value="{{ player.pk }}">
+                    <button type="submit" class="icon-btn danger" title="Remove">
+                        <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state"><p>No players registered yet.</p></div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ============= FIXTURES PANE ============= -->
+<div class="workspace-pane" id="pane-fixtures" style="display:none;">
+    <div class="group-header-row"><h3 class="group-header">Team Fixtures</h3></div>
+    <div class="group">
+        {% for fixture in team_fixtures %}
+        <div class="group-row">
+            <div class="row-left">
+                <div class="avatar-chip mono">R{{ fixture.round_number }}</div>
+                <div>
+                    <div class="cell-main">
+                        {% if fixture.home_team_id == team.pk %}
+                            {{ team.name }} <span style="color:var(--ink-soft); font-weight:400;">vs</span> {{ fixture.away_team.name }}
+                        {% else %}
+                            {{ fixture.home_team.name }} <span style="color:var(--ink-soft); font-weight:400;">vs</span> {{ team.name }}
+                        {% endif %}
+                    </div>
+                    <div class="cell-sub">
+                        {{ fixture.phase_sport.sport.name }} &middot; {{ fixture.phase_sport.phase.scope_label }}
+                        {% if fixture.kickoff_at %} &middot; {{ fixture.kickoff_at|date:"D, d M" }}{% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="row-right">
+                {% if fixture.result %}
+                    <span class="cell-main mono" style="font-size:0.95rem;">{{ fixture.result.home_score }} - {{ fixture.result.away_score }}</span>
+                {% elif fixture.status == 'live' %}
+                    <span class="badge live"><span class="live-dot"></span>Live</span>
+                {% else %}
+                    <span class="badge pending">{{ fixture.get_status_display }}</span>
+                {% endif %}
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state"><p>No fixtures involving this team yet.</p></div>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchWorkspaceTab(paneId, btnElement) {
+        document.querySelectorAll('#workspace-tab-bar .filter-pill').forEach(p => p.classList.remove('active'));
+        btnElement.classList.add('active');
+        document.querySelectorAll('.workspace-pane').forEach(p => p.style.display = 'none');
+        document.getElementById(`pane-${paneId}`).style.display = 'block';
+    }
+
+    function toggleFormPanel(panelId) {
+        document.getElementById(panelId).classList.toggle('active');
+    }
+</script>
+{% endblock %}

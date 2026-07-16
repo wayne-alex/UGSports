@@ -1,0 +1,78 @@
+{% extends "superadmin_base.html" %}
+{% block title %}Build Round {{ next_round_number }} — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ phase_sport.sport.name }} · {{ phase.scope_label }}{% endblock %}
+{% block page_title %}Round {{ next_round_number }}{% endblock %}
+{% block header_actions %}
+<a href="{% url 'phase_detail' phase.pk %}" class="btn-ghost">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<div class="group" style="padding:20px 24px; margin-bottom:20px;">
+    <p style="font-size:0.85rem; color:var(--ink-soft);">
+        {{ qualified_teams|length }} team{{ qualified_teams|length|pluralize }} qualified.
+        Pair them below — any team left unpaired won't get a fixture this round.
+    </p>
+</div>
+
+<form method="post" id="round-form">
+    {% csrf_token %}
+    <input type="hidden" name="pair_count" id="pair-count-input" value="0">
+
+    <div class="group-header-row">
+        <h3 class="group-header">Pairings</h3>
+        <button type="button" class="btn-ghost" onclick="RoundBuilder.addPair()">+ Add Pairing</button>
+    </div>
+    <div class="group" id="pair-rows" style="padding:8px;"></div>
+
+    <div class="form-actions" style="margin-top:20px;">
+        <a href="{% url 'phase_detail' phase.pk %}" class="btn-ghost">Cancel</a>
+        <button type="submit" class="btn-primary">Create Round {{ next_round_number }}</button>
+    </div>
+</form>
+
+<template id="pair-row-template">
+    <div class="pair-row" style="display:flex; gap:8px; align-items:center; padding:10px;">
+        <select class="filter-select pair-home" style="flex:1;" required>
+            <option value="">— Home —</option>
+            {% for team in qualified_teams %}
+            <option value="{{ team.pk }}">{{ team.name }}</option>
+            {% endfor %}
+        </select>
+        <span style="color:var(--ink-soft); font-size:0.8rem;">vs</span>
+        <select class="filter-select pair-away" style="flex:1;" required>
+            <option value="">— Away —</option>
+            {% for team in qualified_teams %}
+            <option value="{{ team.pk }}">{{ team.name }}</option>
+            {% endfor %}
+        </select>
+        <button type="button" class="icon-btn danger" onclick="this.closest('.pair-row').remove()" title="Remove">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const RoundBuilder = {
+        addPair() {
+            const template = document.getElementById('pair-row-template');
+            document.getElementById('pair-rows').appendChild(template.content.cloneNode(true));
+        }
+    };
+
+    document.getElementById('round-form').addEventListener('submit', function (e) {
+        const rows = document.querySelectorAll('#pair-rows .pair-row');
+        document.getElementById('pair-count-input').value = rows.length;
+        rows.forEach((row, i) => {
+            row.querySelector('.pair-home').name = 'home_' + i;
+            row.querySelector('.pair-away').name = 'away_' + i;
+        });
+    });
+
+    // Start with enough pairs for the qualified team count
+    for (let i = 0; i < Math.floor({{ qualified_teams|length }} / 2); i++) {
+        RoundBuilder.addPair();
+    }
+</script>
+{% endblock %}

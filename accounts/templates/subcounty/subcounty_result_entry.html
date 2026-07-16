@@ -1,0 +1,217 @@
+{% extends "subcounty/subcountyadmin_base.html" %}
+{% block title %}Enter Result - UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ fixture.phase_sport.sport.name }}{% endblock %}
+{% block page_title %}{{ fixture.home_team.name }} vs {{ fixture.away_team.name }}{% endblock %}
+{% block header_actions %}
+<a href="{% url 'subcounty_phase_detail' fixture.phase_sport.phase_id %}" class="btn-ghost">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<form method="post" id="result-form">
+    {% csrf_token %}
+    <div class="group" style="padding:24px; margin-bottom:22px;">
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>{{ fixture.home_team.name }} Score</label>
+                <input type="number" name="home_score" id="home-score-input" min="0"
+                       value="{{ result.home_score|default:0 }}" required oninput="ResultForm.sync()">
+            </div>
+            <div class="form-field-box">
+                <label>{{ fixture.away_team.name }} Score</label>
+                <input type="number" name="away_score" id="away-score-input" min="0"
+                       value="{{ result.away_score|default:0 }}" required oninput="ResultForm.sync()">
+            </div>
+        </div>
+    </div>
+
+    <!-- ============= GOAL SCORERS SECTION ============= -->
+    <div class="group-header-row">
+        <h3 class="group-header">{{ fixture.home_team.name }} - Goal Scorers</h3>
+    </div>
+    <div class="group" id="home-goal-rows" style="padding:8px; margin-bottom: 22px;"></div>
+
+    <div class="group-header-row">
+        <h3 class="group-header">{{ fixture.away_team.name }} - Goal Scorers</h3>
+    </div>
+    <div class="group" id="away-goal-rows" style="padding:8px; margin-bottom: 22px;"></div>
+
+    <!-- ============= CARDS / BOOKINGS SECTION ============= -->
+    <div class="group-header-row" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 class="group-header">{{ fixture.home_team.name }} - Bookings</h3>
+        <button type="button" class="btn-secondary btn-sm" onclick="CardForm.addRow('home')">+ Add Card</button>
+    </div>
+    <div class="group" id="home-card-rows" style="padding:8px; margin-bottom: 22px;"></div>
+
+    <div class="group-header-row" style="display: flex; justify-content: space-between; align-items: center;">
+        <h3 class="group-header">{{ fixture.away_team.name }} - Bookings</h3>
+        <button type="button" class="btn-secondary btn-sm" onclick="CardForm.addRow('away')">+ Add Card</button>
+    </div>
+    <div class="group" id="away-card-rows" style="padding:8px; margin-bottom: 22px;"></div>
+
+    <div class="form-actions" style="margin-top:20px;">
+        <a href="{% url 'subcounty_phase_detail' fixture.phase_sport.phase_id %}" class="btn-ghost">Cancel</a>
+        <button type="submit" class="btn-primary">Save Result</button>
+    </div>
+</form>
+
+<!-- ============= GOAL ROW TEMPLATES ============= -->
+<template id="home-goal-row-template">
+    <div class="goal-row" style="display:flex; gap:8px; align-items:center; padding:10px;">
+        <span class="goal-row-num mono" style="width:20px; color:var(--ink-soft); font-size:0.8rem;"></span>
+        <select name="scorer" class="filter-select" style="flex:1;" required>
+            <option value="">- Scorer -</option>
+            {% for p in home_players %}
+            <option value="{{ p.pk }}">#{{ p.jersey_number }} {{ p.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="assisted_by" class="filter-select" style="flex:1;">
+            <option value="">- Assist (optional) -</option>
+            {% for p in home_players %}
+            <option value="{{ p.pk }}">#{{ p.jersey_number }} {{ p.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="minute" placeholder="Min" min="0" max="120" style="width:70px;">
+    </div>
+</template>
+
+<template id="away-goal-row-template">
+    <div class="goal-row" style="display:flex; gap:8px; align-items:center; padding:10px;">
+        <span class="goal-row-num mono" style="width:20px; color:var(--ink-soft); font-size:0.8rem;"></span>
+        <select name="scorer" class="filter-select" style="flex:1;" required>
+            <option value="">- Scorer -</option>
+            {% for p in away_players %}
+            <option value="{{ p.pk }}">#{{ p.jersey_number }} {{ p.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="assisted_by" class="filter-select" style="flex:1;">
+            <option value="">- Assist (optional) -</option>
+            {% for p in away_players %}
+            <option value="{{ p.pk }}">#{{ p.jersey_number }} {{ p.name }}</option>
+            {% endfor %}
+        </select>
+        <input type="number" name="minute" placeholder="Min" min="0" max="120" style="width:70px;">
+    </div>
+</template>
+
+<!-- ============= CARD ROW TEMPLATES ============= -->
+<template id="home-card-row-template">
+    <div class="goal-row card-row" style="display:flex; gap:8px; align-items:center; padding:10px;">
+        <select name="card_player" class="filter-select" style="flex:1;" required>
+            <option value="">- Player -</option>
+            {% for p in home_players %}
+            <option value="{{ p.pk }}">#{{ p.jersey_number }} {{ p.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="card_type" class="filter-select" style="width:120px;" required>
+            <option value="">- Card -</option>
+            <option value="yellow">Yellow</option>
+            <option value="red">Red</option>
+        </select>
+        <input type="number" name="card_minute" placeholder="Min" min="0" max="120" style="width:70px;">
+        <button type="button" class="icon-btn danger" title="Remove" onclick="CardForm.removeRow(this)">
+            <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;stroke-width:2.2;fill:none;">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+    </div>
+</template>
+
+<template id="away-card-row-template">
+    <div class="goal-row card-row" style="display:flex; gap:8px; align-items:center; padding:10px;">
+        <select name="card_player" class="filter-select" style="flex:1;" required>
+            <option value="">- Player -</option>
+            {% for p in away_players %}
+            <option value="{{ p.pk }}">#{{ p.jersey_number }} {{ p.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="card_type" class="filter-select" style="width:120px;" required>
+            <option value="">- Card -</option>
+            <option value="yellow">Yellow</option>
+            <option value="red">Red</option>
+        </select>
+        <input type="number" name="card_minute" placeholder="Min" min="0" max="120" style="width:70px;">
+        <button type="button" class="icon-btn danger" title="Remove" onclick="CardForm.removeRow(this)">
+            <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;stroke-width:2.2;fill:none;">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const ResultForm = {
+        existingHome: [
+            {% for g in existing_home_goals %}
+            { scorer: {{ g.scorer_id }}, assisted_by: {{ g.assisted_by_id|default:"null" }}, minute: {{ g.minute|default:"null" }} }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        existingAway: [
+            {% for g in existing_away_goals %}
+            { scorer: {{ g.scorer_id }}, assisted_by: {{ g.assisted_by_id|default:"null" }}, minute: {{ g.minute|default:"null" }} }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+
+        buildRows(container, templateId, count, existing) {
+            container.innerHTML = '';
+            const template = document.getElementById(templateId);
+            for (let i = 0; i < count; i++) {
+                const clone = template.content.cloneNode(true);
+                clone.querySelector('.goal-row-num').textContent = 'G' + (i + 1);
+                const data = existing[i];
+                if (data) {
+                    clone.querySelector('[name="scorer"]').value = data.scorer;
+                    if (data.assisted_by) clone.querySelector('[name="assisted_by"]').value = data.assisted_by;
+                    if (data.minute) clone.querySelector('[name="minute"]').value = data.minute;
+                }
+                container.appendChild(clone);
+            }
+        },
+
+        sync() {
+            const homeCount = parseInt(document.getElementById('home-score-input').value, 10) || 0;
+            const awayCount = parseInt(document.getElementById('away-score-input').value, 10) || 0;
+            this.buildRows(document.getElementById('home-goal-rows'), 'home-goal-row-template', homeCount, this.existingHome);
+            this.buildRows(document.getElementById('away-goal-rows'), 'away-goal-row-template', awayCount, this.existingAway);
+        }
+    };
+
+    const CardForm = {
+        existingHome: [
+            {% for c in existing_home_cards %}
+            { player: {{ c.player_id }}, card_type: "{{ c.card_type }}", minute: {{ c.minute|default:"null" }} }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+        existingAway: [
+            {% for c in existing_away_cards %}
+            { player: {{ c.player_id }}, card_type: "{{ c.card_type }}", minute: {{ c.minute|default:"null" }} }{% if not forloop.last %},{% endif %}
+            {% endfor %}
+        ],
+
+        addRow(team, data) {
+            const container = document.getElementById(team + '-card-rows');
+            const template = document.getElementById(team + '-card-row-template');
+            const clone = template.content.cloneNode(true);
+            if (data) {
+                clone.querySelector('[name="card_player"]').value = data.player;
+                clone.querySelector('[name="card_type"]').value = data.card_type;
+                if (data.minute) clone.querySelector('[name="card_minute"]').value = data.minute;
+            }
+            container.appendChild(clone);
+        },
+
+        removeRow(btnEl) {
+            btnEl.closest('.card-row').remove();
+        },
+
+        init() {
+            this.existingHome.forEach(c => this.addRow('home', c));
+            this.existingAway.forEach(c => this.addRow('away', c));
+        }
+    };
+
+    ResultForm.sync();
+    CardForm.init();
+</script>
+{% endblock %}

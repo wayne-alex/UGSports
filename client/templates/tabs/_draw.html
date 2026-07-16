@@ -1,0 +1,161 @@
+<style>
+    .draw-progress-note {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        background: #FAFBFC;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        color: var(--ink-soft);
+        margin-bottom: 14px;
+    }
+    .draw-progress-note .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--ochre);
+        flex-shrink: 0;
+        animation: pulse 1.4s infinite;
+    }
+
+    .bracket-scroll {
+        display: flex;
+        gap: 18px;
+        overflow-x: auto;
+        padding: 18px 18px 22px;
+        scroll-snap-type: x proximity;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+    .bracket-scroll::-webkit-scrollbar { display: none; }
+
+    .bracket-round {
+        flex-shrink: 0;
+        width: 200px;
+        scroll-snap-align: start;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+    .bracket-round-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        color: var(--pitch);
+        margin-bottom: 2px;
+    }
+    .bracket-match {
+        background: #FAFBFC;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        overflow: hidden;
+    }
+    .bracket-team-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 9px 12px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+    .bracket-team-row + .bracket-team-row { border-top: 1px solid var(--line); }
+    .bracket-team-row.winner { color: var(--pitch); font-weight: 700; }
+    .bracket-team-row.winner::before {
+        content: "";
+        width: 5px; height: 5px;
+        border-radius: 50%;
+        background: var(--ochre);
+        display: inline-block;
+        margin-right: 7px;
+    }
+    .bracket-score {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.78rem;
+        font-weight: 700;
+    }
+    .bracket-kickoff {
+        font-size: 0.64rem;
+        color: var(--ink-faint);
+        font-weight: 600;
+    }
+</style>
+
+{% for ps in draw_phase_sports %}
+<div class="sports-card">
+    <div class="card-top-bar">
+        <span>{{ ps.sport.name }}</span>
+        <span>{{ selected_phase.scope_label }}</span>
+    </div>
+
+    {% if ps.fixture_format == 'knockout' or ps.fixture_format == 'group_knockout' %}
+
+        {% if ps.fixture_format == 'group_knockout' and not ps.group_stage_complete %}
+            {# ---------- GROUP STAGE STILL RUNNING, bracket not locked in yet ---------- #}
+            <div class="empty-state" style="padding: 40px 22px;">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                </div>
+                <p>The group stage is still underway. The knockout bracket will appear here once every group fixture has a result.</p>
+            </div>
+
+        {% elif ps.bracket_rounds %}
+            {# ---------- BRACKET, group stage finished (or pure knockout) ---------- #}
+            {% if ps.fixture_format == 'group_knockout' %}
+            <div class="draw-progress-note">
+                <span class="dot"></span> Group stage complete — bracket below
+            </div>
+            {% endif %}
+            <div class="bracket-scroll">
+                {% for round_number, round_fixtures in ps.bracket_rounds %}
+                <div class="bracket-round">
+                    <div class="bracket-round-title">
+                        {% if forloop.revcounter0 == 0 %}Final
+                        {% elif forloop.revcounter0 == 1 %}Semi-Finals
+                        {% elif forloop.revcounter0 == 2 %}Quarter-Finals
+                        {% else %}Round {{ round_number }}{% endif %}
+                    </div>
+                    {% for f in round_fixtures %}
+                    <div class="bracket-match">
+                        <div class="bracket-team-row {% if f.result and f.result.home_score > f.result.away_score %}winner{% endif %}">
+                            <span>{{ f.home_team.name }}</span>
+                            {% if f.result %}<span class="bracket-score">{{ f.result.home_score }}</span>
+                            {% else %}<span class="bracket-kickoff">{{ f.kickoff_at|date:"D H:i"|default:"TBD" }}</span>{% endif %}
+                        </div>
+                        <div class="bracket-team-row {% if f.result and f.result.away_score > f.result.home_score %}winner{% endif %}">
+                            <span>{{ f.away_team.name }}</span>
+                            {% if f.result %}<span class="bracket-score">{{ f.result.away_score }}</span>{% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endfor %}
+            </div>
+
+        {% else %}
+            {# ---------- knockout format but fixtures not generated yet ---------- #}
+            <div class="empty-state" style="padding: 40px 22px;">
+                <div class="icon">
+                    <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                </div>
+                <p>The bracket hasn't been generated yet for {{ ps.sport.name }}.</p>
+            </div>
+        {% endif %}
+
+    {% else %}
+        {# ---------- LEAGUE / UEFA LEAGUE PHASE: no bracket at all ---------- #}
+        <div class="sports-card empty-state">
+            <div class="icon">
+                <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+            </div>
+            <p>This tournament doesn't use a bracket draw. Check Matches or Tables for fixtures and standings.</p>
+        </div>
+    {% endif %}
+</div>
+{% empty %}
+<div class="sports-card empty-state"><p>No sports have been added to this phase yet.</p></div>
+{% endfor %}

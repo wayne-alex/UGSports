@@ -1,0 +1,1286 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UG Sports - Lobby</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+          rel="stylesheet">
+
+    <style>
+        :root {
+            --pitch: #1B4332;
+            --pitch-dark: #0C2417;
+            --ochre: #D98A3D;
+            --rust: #C1440E;
+            --bg: #F8FAFC;
+            --card: #FFFFFF;
+            --ink: #0F172A;
+            --ink-soft: #64748B;
+            --line: #E2E8F0;
+            --header-h: 64px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        /* ===== FIXED HEADER ===== */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--header-h);
+            background: var(--pitch);
+            padding: 0 24px;
+            color: #fff;
+            z-index: 200;
+            display: flex;
+            align-items: center;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1300px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .crest {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crest img {
+            width: 24px;
+            height: 24px;
+            object-fit: contain;
+        }
+
+        .brand-title h1 {
+            font-size: 1.02rem;
+            font-weight: 700;
+        }
+
+        .brand-title p {
+            font-size: 0.62rem;
+            color: var(--ochre);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            margin-top: 1px;
+        }
+
+        /* ===== LAYOUT ===== */
+        .layout {
+            max-width: 1300px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            padding-top: var(--header-h);
+            padding-bottom: 84px;
+        }
+
+        .content-col {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ===== TABS ===== */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            padding: 20px 24px 0 24px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .tab {
+            padding: 8px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--ink-soft);
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+        }
+
+        .tab:hover {
+            color: var(--ink);
+        }
+
+        .tab.active {
+            color: var(--pitch);
+            border-bottom-color: var(--pitch);
+        }
+
+        /* ===== FILTERS / CUSTOM DROPDOWNS ===== */
+        .filters {
+            display: flex;
+            gap: 12px;
+            padding: 16px 24px 0 24px;
+            flex-wrap: wrap;
+        }
+
+        .filter-box {
+            flex: 1;
+            min-width: 180px;
+            max-width: 260px;
+            position: relative;
+        }
+
+        .filter-box label {
+            display: block;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: var(--ink-soft);
+            margin-bottom: 5px;
+        }
+
+        .select {
+            position: relative;
+        }
+
+        .select-trigger {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            padding: 10px 12px 10px 14px;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--ink);
+            cursor: pointer;
+            text-align: left;
+        }
+
+        .select-trigger:hover {
+            border-color: #CBD5E1;
+        }
+
+        .select.open .select-trigger {
+            border-color: var(--pitch);
+            box-shadow: 0 0 0 3px rgba(27, 67, 50, 0.08);
+        }
+
+        .select-trigger .chevron {
+            width: 15px;
+            height: 15px;
+            stroke: var(--ink-soft);
+            stroke-width: 2.5;
+            fill: none;
+            transition: transform 0.15s ease;
+            flex-shrink: 0;
+            margin-left: 8px;
+        }
+
+        .select.open .chevron {
+            transform: rotate(180deg);
+        }
+
+        .select-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+            padding: 6px;
+            z-index: 50;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-4px);
+            transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
+            max-height: 260px;
+            overflow-y: auto;
+        }
+
+        .select.open .select-menu {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .select-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 10px;
+            font-size: 0.83rem;
+            font-weight: 500;
+            color: var(--ink);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .select-option:hover {
+            background: #F1F5F9;
+        }
+
+        .select-option.selected {
+            font-weight: 700;
+            color: var(--pitch);
+        }
+
+        .select-option .check {
+            width: 14px;
+            height: 14px;
+            stroke: var(--pitch);
+            stroke-width: 2.6;
+            fill: none;
+            opacity: 0;
+        }
+
+        .select-option.selected .check {
+            opacity: 1;
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            padding: 20px 24px;
+        }
+
+        .view {
+            display: none;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        .section-heading {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .section-heading .sub {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--ink-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* ===== TOURNAMENT CARDS ===== */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 320px));
+            gap: 16px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+        }
+
+        .card-banner {
+            height: 100px;
+            background: linear-gradient(135deg, var(--pitch-dark), var(--pitch));
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: #fff;
+        }
+
+        .sport-tag {
+            align-self: flex-start;
+            background: rgba(255, 255, 255, 0.18);
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            padding: 4px 9px;
+            border-radius: 6px;
+        }
+
+        .card-actions {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 6px;
+        }
+
+        .action-btn {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.18);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        .action-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: none;
+            stroke: #fff;
+            stroke-width: 2.5;
+        }
+
+        .action-btn.liked svg {
+            fill: #EF4444;
+            stroke: #EF4444;
+        }
+
+        .action-btn.followed svg {
+            fill: var(--ochre);
+            stroke: var(--ochre);
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-top: auto;
+        }
+
+        .card-body {
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .card-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            color: var(--ink-soft);
+        }
+
+        .card-stats b {
+            color: var(--ink);
+            font-weight: 700;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--rust);
+            animation: pulse 1.4s infinite;
+        }
+
+        .status.live {
+            color: var(--rust);
+        }
+
+        .status.upcoming {
+            color: var(--ochre);
+        }
+
+        .enter-btn {
+            width: 100%;
+            text-align: center;
+            background: #F1F5F9;
+            color: var(--pitch);
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 9px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .enter-btn:hover {
+            background: var(--pitch);
+            color: #fff;
+        }
+
+        /* ===== NEWS VIEW ===== */
+        .news-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 640px;
+        }
+
+        .news-card {
+            background: var(--card);
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+
+        .news-badge {
+            color: var(--pitch);
+            background: #E2E8F0;
+            padding: 2px 7px;
+            border-radius: 4px;
+        }
+
+        .news-time {
+            color: var(--ink-soft);
+        }
+
+        .news-scope {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: var(--pitch);
+        }
+
+        .news-card h4 {
+            font-size: 0.88rem;
+            font-weight: 700;
+        }
+
+        .news-card p {
+            font-size: 0.8rem;
+            color: var(--ink-soft);
+            line-height: 1.5;
+        }
+
+        .news-interactions {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--line);
+        }
+
+        .interaction-btn {
+            background: none;
+            border: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--ink-soft);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .interaction-btn:hover, .interaction-btn.active {
+            color: var(--pitch);
+        }
+
+        .interaction-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+        }
+
+        .interaction-btn.liked svg {
+            fill: #EF4444;
+            stroke: #EF4444;
+        }
+
+        .news-comments-section {
+            display: none;
+            background: #F8FAFC;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .comment {
+            font-size: 0.78rem;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        .comment:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .comment strong {
+            color: var(--pitch);
+            margin-right: 5px;
+        }
+
+        .comment-input-area {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .comment-input-area input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-family: inherit;
+        }
+
+        .comment-input-area button {
+            background: var(--pitch);
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .empty-state {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--ink-soft);
+            font-size: 0.85rem;
+            grid-column: 1 / -1;
+        }
+
+        /* ===== BOTTOM NAV (mobile) & NEWS NOTIFICATION ===== */
+        .nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 72px;
+            background: rgba(255, 255, 255, 0.97);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid var(--line);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .nav-btn {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: #94A3B8;
+            font-size: 0.62rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .nav-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: none;
+            stroke: #94A3B8;
+            stroke-width: 2;
+        }
+
+        .nav-btn.active {
+            color: var(--pitch);
+        }
+
+        .nav-btn.active svg {
+            stroke: var(--pitch);
+        }
+
+        .news-alert-dot {
+            position: absolute;
+            top: -2px;
+            right: 25%;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--rust);
+            border: 2px solid #fff;
+            display: none;
+        }
+
+        @media (max-width: 480px) {
+            .filters {
+                padding: 14px 16px 0 16px;
+                gap: 8px;
+                flex-wrap: nowrap;
+            }
+
+            .filter-box {
+                min-width: 0;
+                max-width: none;
+            }
+
+            .filter-box label {
+                font-size: 0.56rem;
+                margin-bottom: 4px;
+            }
+
+            .select-trigger {
+                padding: 8px 8px 8px 10px;
+                font-size: 0.74rem;
+            }
+
+            .select-trigger .chevron {
+                width: 12px;
+                height: 12px;
+                margin-left: 4px;
+            }
+
+            .tabs, .main-content {
+                padding-left: 16px;
+                padding-right: 16px;
+            }
+        }
+
+        @media (min-width: 768px) {
+            .layout {
+                padding-bottom: 0;
+                display: grid;
+                grid-template-columns: 220px 1fr;
+                padding-top: 0;
+            }
+
+            .content-col {
+                grid-column: 2;
+                margin-top: var(--header-h);
+            }
+
+            .nav {
+                position: static;
+                width: auto;
+                height: auto;
+                flex-direction: column;
+                justify-content: flex-start;
+                align-items: stretch;
+                padding: 24px 14px;
+                gap: 4px;
+                background: transparent;
+                border-top: none;
+                border-right: 1px solid var(--line);
+                margin-top: var(--header-h);
+                grid-column: 1;
+            }
+
+            .nav-btn {
+                flex-direction: row;
+                padding: 10px 12px;
+                border-radius: 8px;
+                gap: 12px;
+                font-size: 0.85rem;
+            }
+
+            .nav-btn:hover {
+                background: #E2E8F0;
+                color: var(--ink);
+            }
+
+            .nav-btn.active {
+                background: var(--pitch);
+                color: #fff;
+            }
+
+            .nav-btn.active svg {
+                stroke: #fff;
+            }
+
+            .news-alert-dot {
+                top: 12px;
+                right: 12px;
+                border: 2px solid var(--bg);
+            }
+
+            .nav-btn:hover .news-alert-dot {
+                border-color: #E2E8F0;
+            }
+
+            .nav-btn.active .news-alert-dot {
+                border-color: var(--pitch);
+            }
+
+            .tabs, .filters, .main-content {
+                padding-left: 28px;
+                padding-right: 28px;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.35;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-row">
+        <div class="brand">
+            <div class="crest">
+                <img src="{% static 'UG_LOGO.png' %}" alt="County Logo">
+            </div>
+            <div class="brand-title">
+                <h1>UG Sports</h1>
+                <p>Tournament Lobby</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="layout">
+
+    <nav class="nav">
+        <div class="nav-btn active" onclick="switchView('all')">
+            <svg viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="9"/>
+                <rect x="14" y="3" width="7" height="5"/>
+                <rect x="14" y="12" width="7" height="9"/>
+                <rect x="3" y="16" width="7" height="5"/>
+            </svg>
+            <span>Lobby</span>
+        </div>
+        <div class="nav-btn" onclick="switchView('fav')">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+            <span>Favorites</span>
+        </div>
+        <div class="nav-btn" onclick="switchView('news')" id="nav-news-btn">
+            <svg viewBox="0 0 24 24">
+                <path d="M4 4h16v16H4z"/>
+                <path d="M4 9h16"/>
+                <path d="M9 4v16"/>
+            </svg>
+            <span>News</span>
+            <span class="news-alert-dot" id="news-indicator"></span>
+        </div>
+    </nav>
+
+    <div class="content-col">
+        <div class="tabs" id="lobby-tabs">
+            <div class="tab active" id="tab-all" onclick="switchView('all')">Ongoing</div>
+            <div class="tab" id="tab-fav" onclick="switchView('fav')">Favorites</div>
+        </div>
+
+        <div class="filters" id="lobby-filters">
+            <div class="filter-box">
+                <label>Sport</label>
+                <div class="select" data-select="sport">
+                    <button type="button" class="select-trigger" onclick="toggleSelect(this)">
+                        <span class="select-value">All Sports</span>
+                        <svg class="chevron" viewBox="0 0 24 24">
+                            <path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                        </svg>
+                    </button>
+                    <div class="select-menu">
+                        <div class="select-option selected" data-value="all" onclick="chooseOption(this)">
+                            <span>All Sports</span>
+                            <svg class="check" viewBox="0 0 24 24">
+                                <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                        </div>
+                        {% for sport in sports %}
+                        <div class="select-option" data-value="{{ sport.pk }}" onclick="chooseOption(this)">
+                            <span>{{ sport.name }}</span>
+                            <svg class="check" viewBox="0 0 24 24">
+                                <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="filter-box">
+                <label>Sub-County</label>
+                <div class="select" data-select="subcounty">
+                    <button type="button" class="select-trigger" onclick="toggleSelect(this)">
+                        <span class="select-value">All Sub-Counties</span>
+                        <svg class="chevron" viewBox="0 0 24 24">
+                            <path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
+                        </svg>
+                    </button>
+                    <div class="select-menu">
+                        <div class="select-option selected" data-value="all" onclick="chooseOption(this)">
+                            <span>All Sub-Counties</span>
+                            <svg class="check" viewBox="0 0 24 24">
+                                <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                        </div>
+                        {% for sc in sub_counties %}
+                        <div class="select-option" data-value="{{ sc.pk }}" onclick="chooseOption(this)">
+                            <span>{{ sc.name }}</span>
+                            <svg class="check" viewBox="0 0 24 24">
+                                <path d="M20 6L9 17l-5-5"/>
+                            </svg>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div id="ongoing-view" class="view active">
+                <div class="section-heading">Active Tournaments <span class="sub">Tap to enter</span></div>
+                <div class="card-grid" id="ongoing-grid">
+                    {% for tournament in tournaments %}
+                    <div class="card" data-id="tournament-{{ tournament.pk }}"
+                         data-sport="{% for sport in tournament.sports.all %}{{ sport.pk }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                         data-subcounty="{{ tournament.sub_county_id|default:'' }}">
+                        <div class="card-banner{% if forloop.counter|divisibleby:2 %} blue{% endif %}">
+                            <span class="sport-tag">{% for sport in tournament.sports.all %}{{ sport.name }}{% if not forloop.last %} & {% endif %}{% endfor %}</span>
+                            <div class="card-actions">
+                                <button class="action-btn like-btn"
+                                        onclick="toggleAction(event, this, 'like', 'tournament-{{ tournament.pk }}')">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                    </svg>
+                                </button>
+                                <button class="action-btn follow-btn"
+                                        onclick="toggleAction(event, this, 'follow', 'tournament-{{ tournament.pk }}')">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <h3 class="card-title">{{ tournament.name }}</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-stats">
+                                <span>Season: <b>{{ tournament.season }}</b></span>
+                                <span>Teams: <b>{{ tournament.team_count }}</b></span>
+                            </div>
+                            {% if tournament.status == 'ongoing' %}
+                            <div class="status live"><span class="status-dot"></span> Live now</div>
+                            {% else %}
+                            <div class="status upcoming">
+                                {% if tournament.start_date %}Starts {{ tournament.start_date|date:"D, d M" }}{% else %}Starting soon{% endif %}
+                            </div>
+                            {% endif %}
+                            <button class="enter-btn"
+                                    onclick="Shell.goto('tournament-{{ tournament.pk }}', '{% url 'client_dashboard' tournament.pk %}')">
+                                Enter Tournament
+                            </button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p>No live or upcoming tournaments right now. Check back soon.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div id="favorites-view" class="view">
+                <div class="section-heading">My Favorites</div>
+                <div class="card-grid" id="favorites-grid">
+                    <div class="empty-state">
+                        <p>You haven't added any favorites yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="news-view" class="view">
+                <div class="section-heading">News</div>
+                <div class="news-list">
+                    {% for post in news_posts %}
+                    <div class="news-card" data-post-id="{{ post.pk }}">
+                        <div class="news-meta">
+                            <span class="news-badge">{{ post.get_tag_display }}</span>
+                            <span class="news-time">{{ post.published_at|timesince }} ago</span>
+                        </div>
+                        {% if post.phase %}
+                        <div class="news-scope">{{ post.phase.tournament.name }} · {{ post.phase.name }}</div>
+                        {% elif post.sub_county %}
+                        <div class="news-scope">{{ post.sub_county.name }} · County-Wide</div>
+                        {% endif %}
+                        <h4>{{ post.title }}</h4>
+                        <p>{{ post.body }}</p>
+
+                        <div class="news-interactions">
+                            <button class="interaction-btn" onclick="handleNewsLike(this, {{ post.pk }})">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                                <span><span class="like-count-val">{{ post.like_count|default:"0" }}</span> Likes</span>
+                            </button>
+                            <button class="interaction-btn" onclick="toggleNewsComments({{ post.pk }})">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                                </svg>
+                                <span>{{ post.comments.count|default:"0" }} Comments</span>
+                            </button>
+                        </div>
+
+                        <div class="news-comments-section" id="news-comments-{{ post.pk }}">
+                            <div class="comments-container" id="comments-list-{{ post.pk }}">
+                                {% for comment in post.comments.all %}
+                                <div class="comment">
+                                    <strong>{{ comment.display_author_name }}</strong>{{ comment.content }}
+                                </div>
+                                {% empty %}
+                                <div class="comment empty-comment">No comments yet. Be the first!</div>
+                                {% endfor %}
+                            </div>
+                            <div class="comment-input-area">
+                                <input type="text" id="comment-input-{{ post.pk }}" placeholder="Write a comment...">
+                                <button onclick="postNewsComment({{ post.pk }})">Post</button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.Shell = window.Shell || {
+        goto: function(id, url) {
+            window.location.href = url;
+        }
+    };
+
+    // ==========================================
+    // CSRF TOKEN HELPER FOR DJANGO POST REQUESTS
+    // ==========================================
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // ==========================================
+    // VIEW SWITCHING & UI LOGIC
+    // ==========================================
+    function switchView(view) {
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+
+        if (view === 'all' || view === 'fav') {
+            document.querySelector('.nav-btn[onclick="switchView(\'all\')"]').classList.add('active');
+        } else {
+            const activeBtn = document.querySelector(`.nav-btn[onclick="switchView('${view}')"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+        }
+
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        document.getElementById('lobby-filters').style.display = 'none';
+        document.getElementById('lobby-tabs').style.display = 'none';
+
+        if (view === 'all') {
+            document.getElementById('ongoing-view').classList.add('active');
+            document.getElementById('lobby-filters').style.display = 'flex';
+            document.getElementById('lobby-tabs').style.display = 'flex';
+            activateTab('tab-all');
+        } else if (view === 'fav') {
+            document.getElementById('favorites-view').classList.add('active');
+            document.getElementById('lobby-filters').style.display = 'flex';
+            document.getElementById('lobby-tabs').style.display = 'flex';
+            activateTab('tab-fav');
+        } else if (view === 'news') {
+            document.getElementById('news-view').classList.add('active');
+            const indicator = document.getElementById('news-indicator');
+            if (indicator) indicator.style.display = 'none';
+        }
+    }
+
+    function activateTab(tabId) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+    }
+
+    function toggleSelect(button) {
+        const select = button.parentElement;
+        const isOpen = select.classList.contains('open');
+        document.querySelectorAll('.select').forEach(s => s.classList.remove('open'));
+        if (!isOpen) select.classList.add('open');
+    }
+
+    // ==========================================
+    // FILTERING (Sport + Sub-County)
+    // ==========================================
+    function chooseOption(optionElement) {
+        const select = optionElement.closest('.select');
+        select.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('selected'));
+        optionElement.classList.add('selected');
+        select.querySelector('.select-value').textContent = optionElement.querySelector('span').textContent;
+        select.classList.remove('open');
+
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const sportSelected = document.querySelector('.select[data-select="sport"] .select-option.selected');
+        const subcountySelected = document.querySelector('.select[data-select="subcounty"] .select-option.selected');
+
+        const sportVal = sportSelected ? sportSelected.dataset.value : 'all';
+        const subcountyVal = subcountySelected ? subcountySelected.dataset.value : 'all';
+
+        const cards = document.querySelectorAll('#ongoing-grid .card');
+        let visibleCount = 0;
+
+        cards.forEach(card => {
+            const cardSports = (card.dataset.sport || '').split(',').filter(Boolean);
+            const cardSubcounty = card.dataset.subcounty || '';
+
+            const sportMatch = sportVal === 'all' || cardSports.includes(sportVal);
+            // County-wide tournaments (no sub_county set) always show, regardless of filter
+            const subcountyMatch = subcountyVal === 'all' || cardSubcounty === '' || cardSubcounty === subcountyVal;
+
+            const show = sportMatch && subcountyMatch;
+            card.style.display = show ? '' : 'none';
+            if (show) visibleCount++;
+        });
+
+        toggleFilterEmptyState(visibleCount);
+    }
+
+    function toggleFilterEmptyState(visibleCount) {
+        const grid = document.getElementById('ongoing-grid');
+        let emptyMsg = grid.querySelector('.filter-empty-state');
+
+        if (visibleCount === 0) {
+            if (!emptyMsg) {
+                emptyMsg = document.createElement('div');
+                emptyMsg.className = 'empty-state filter-empty-state';
+                emptyMsg.innerHTML = '<p>No tournaments match these filters.</p>';
+                grid.appendChild(emptyMsg);
+            }
+            emptyMsg.style.display = 'block';
+        } else if (emptyMsg) {
+            emptyMsg.style.display = 'none';
+        }
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.select')) {
+            document.querySelectorAll('.select').forEach(s => s.classList.remove('open'));
+        }
+    });
+
+    function toggleAction(event, btn, action, targetId) {
+        event.stopPropagation();
+        if (action === 'like') btn.classList.toggle('liked');
+        else if (action === 'follow') btn.classList.toggle('followed');
+    }
+
+    function toggleNewsComments(postId) {
+        const section = document.getElementById(`news-comments-${postId}`);
+        section.style.display = (section.style.display === 'block') ? 'none' : 'block';
+    }
+
+    // ==========================================
+    // NEWS API INTEGRATION
+    // ==========================================
+    function handleNewsLike(btn, postId) {
+        btn.classList.add('liked');
+
+        fetch(`/api/news/${postId}/like/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const countSpan = btn.querySelector('.like-count-val');
+                countSpan.textContent = data.like_count;
+            }
+        })
+        .catch(error => console.error('Error liking post:', error));
+    }
+
+    function postNewsComment(postId) {
+        const input = document.getElementById(`comment-input-${postId}`);
+        const content = input.value.trim();
+        const postBtn = input.nextElementSibling;
+
+        if (!content) return;
+
+        input.disabled = true;
+        postBtn.disabled = true;
+
+        fetch(`/api/news/${postId}/comment/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                content: content,
+                guest_name: 'Anonymous Viewer'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                const list = document.getElementById(`comments-list-${postId}`);
+
+                const emptyState = list.querySelector('.empty-comment');
+                if (emptyState) emptyState.remove();
+
+                const newComment = document.createElement('div');
+                newComment.className = 'comment';
+                newComment.innerHTML = `<strong>${data.comment.author}</strong> ${data.comment.content}`;
+                list.appendChild(newComment);
+
+                input.value = '';
+
+                const commentBtn = document.querySelector(`button[onclick="toggleNewsComments(${postId})"] span`);
+                if (commentBtn) {
+                    let currentCount = parseInt(commentBtn.textContent) || 0;
+                    commentBtn.textContent = `${currentCount + 1} Comments`;
+                }
+            } else {
+                console.error(data.message);
+            }
+        })
+        .catch(error => console.error('Error posting comment:', error))
+        .finally(() => {
+            input.disabled = false;
+            postBtn.disabled = false;
+            input.focus();
+        });
+    }
+
+    function startNewsPolling() {
+        setInterval(() => {
+            const posts = document.querySelectorAll('.news-card');
+
+            posts.forEach(postEl => {
+                const postId = postEl.getAttribute('data-post-id');
+                if (!postId) return;
+
+                fetch(`/api/news/${postId}/poll/`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        const likeCountSpan = postEl.querySelector('.like-count-val');
+                        if (likeCountSpan && data.like_count !== undefined) {
+                            likeCountSpan.textContent = data.like_count;
+                        }
+
+                        const list = document.getElementById(`comments-list-${postId}`);
+                        if (list && data.latest_comments) {
+                            list.innerHTML = '';
+
+                            if (data.latest_comments.length === 0) {
+                                list.innerHTML = '<div class="comment empty-comment">No comments yet. Be the first!</div>';
+                            } else {
+                                data.latest_comments.forEach(c => {
+                                    const commentDiv = document.createElement('div');
+                                    commentDiv.className = 'comment';
+                                    commentDiv.innerHTML = `<strong>${c.author}</strong> ${c.content}`;
+                                    list.appendChild(commentDiv);
+                                });
+                            }
+                        }
+                    }
+                })
+                .catch(err => console.error(`Failed to poll post ${postId}:`, err));
+            });
+        }, 15000);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        startNewsPolling();
+    });
+    if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(function(registration) {
+        console.log('SW registered, scope:', registration.scope);
+      })
+      .catch(function(error) {
+        console.log('SW registration failed:', error);
+      });
+  });
+}
+</script>
+</body>
+</html>

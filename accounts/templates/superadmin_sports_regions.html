@@ -1,0 +1,269 @@
+{% extends "superadmin_base.html" %}
+
+{% block title %}Sports & Regions — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}Configuration{% endblock %}
+{% block page_title %}Sports & Regions{% endblock %}
+
+{% block content %}
+
+<!-- ================================================== -->
+<!-- SECTION 1: SPORTS / DISCIPLINES                      -->
+<!-- ================================================== -->
+<div class="inline-form-panel" id="sport-form-panel">
+    <div class="form-panel-title" id="sport-form-title">Add New Sport</div>
+    <form method="post" action="" id="sport-form">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Sport Name</label>
+                <input type="text" name="name" id="sport-name-field" placeholder="e.g. Basketball" required>
+            </div>
+            <div class="form-field-box">
+                <label>Match Format / Rules Summary</label>
+                <input type="text" name="rules_summary" id="sport-rules-field" placeholder="e.g. 5 vs 5, 4x10min quarters" required>
+            </div>
+            <div class="form-field-box">
+                <label>Players Per Side</label>
+                <input type="number" name="players_per_side" id="sport-players-field" min="1" placeholder="11" required>
+            </div>
+            <div class="form-field-box">
+                <label>Status</label>
+                <select name="is_active" id="sport-active-field">
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn-ghost" onclick="toggleFormPanel('sport-form-panel')">Cancel</button>
+            <button type="submit" class="btn-primary" id="sport-form-submit">Save Sport</button>
+        </div>
+    </form>
+</div>
+
+<div class="group-header-row">
+    <h3 class="group-header">Match Disciplines</h3>
+    <button class="btn-ghost" onclick="addSport()">+ Add Sport</button>
+</div>
+<div class="group" id="sports-table-list">
+    {% for sport in sports %}
+    <div class="group-row"
+         data-edit-url="{% url 'sport_edit' sport.pk %}"
+         data-name="{{ sport.name }}"
+         data-rules="{{ sport.rules_summary }}"
+         data-players="{{ sport.players_per_side }}"
+         data-active="{{ sport.is_active|yesno:'true,false' }}">
+        <div class="row-left">
+            <div class="avatar-chip">{{ sport.name|slice:":2"|upper }}</div>
+            <div>
+                <div class="cell-main">{{ sport.name }}</div>
+                <div class="cell-sub">{{ sport.rules_summary }} · {{ sport.players_per_side }} per side</div>
+            </div>
+        </div>
+        <div class="row-right">
+            <span class="badge {% if sport.is_active %}success{% else %}pending{% endif %}">
+                {% if sport.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+            <span class="cell-sub" style="margin: 0;">{{ sport.tournament_entries.count }} tournament{{ sport.tournament_entries.count|pluralize }}</span>
+            <button class="icon-btn" title="Edit" onclick="editSport(this)">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <div class="icon">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>
+        </div>
+        <p>No sports set up yet. Add Football, Volleyball, or any other discipline your tournaments will run.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ================================================== -->
+<!-- SECTION 2: SUB-COUNTIES                              -->
+<!-- ================================================== -->
+<div class="inline-form-panel" id="subcounty-form-panel">
+    <div class="form-panel-title" id="subcounty-form-title">Add New Sub-County</div>
+    <form method="post" action="" id="subcounty-form">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Sub-County Name</label>
+                <input type="text" name="name" id="subcounty-name-field" placeholder="e.g. Kapseret" required>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn-ghost" onclick="toggleFormPanel('subcounty-form-panel')">Cancel</button>
+            <button type="submit" class="btn-primary" id="subcounty-form-submit">Save Sub-County</button>
+        </div>
+    </form>
+</div>
+
+<div class="group-header-row">
+    <h3 class="group-header">Sub-Counties</h3>
+    <button class="btn-ghost" onclick="addSubCounty()">+ Add Sub-County</button>
+</div>
+<div class="group" id="subcounty-table-list">
+    {% for sc in sub_counties %}
+    <div class="group-row" data-edit-url="{% url 'subcounty_edit' sc.pk %}" data-name="{{ sc.name }}">
+        <div class="row-left">
+            <div class="avatar-chip">{{ sc.name|slice:":2"|upper }}</div>
+            <div>
+                <div class="cell-main">{{ sc.name }} Sub-County</div>
+                <div class="cell-sub">{{ sc.wards.count }} ward{{ sc.wards.count|pluralize }} · {{ sc.admins.count }} admin{{ sc.admins.count|pluralize }}</div>
+            </div>
+        </div>
+        <div class="row-right">
+            <button class="icon-btn" title="Edit" onclick="editSubCounty(this)">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <p>No sub-counties onboarded yet. Add one before creating wards or ward-level tournaments.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ================================================== -->
+<!-- SECTION 3: WARDS                                     -->
+<!-- ================================================== -->
+<div class="inline-form-panel" id="ward-form-panel">
+    <div class="form-panel-title" id="ward-form-title">Add New Ward</div>
+    <form method="post" action="" id="ward-form">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Ward Name</label>
+                <input type="text" name="name" id="ward-name-field" placeholder="e.g. Kipkenyo" required>
+            </div>
+            <div class="form-field-box">
+                <label>Sub-County</label>
+                <select name="sub_county" id="ward-subcounty-field" required>
+                    <option value="">Select a sub-county</option>
+                    {% for sc in sub_counties %}
+                        <option value="{{ sc.id }}">{{ sc.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn-ghost" onclick="toggleFormPanel('ward-form-panel')">Cancel</button>
+            <button type="submit" class="btn-primary" id="ward-form-submit">Save Ward</button>
+        </div>
+    </form>
+</div>
+
+<div class="group-header-row">
+    <h3 class="group-header">Wards</h3>
+    <button class="btn-ghost" onclick="addWard()">+ Add Ward</button>
+</div>
+
+<div class="filter-pills" id="ward-subcounty-pills">
+    <button type="button" class="filter-pill active" data-subcounty="all" onclick="setWardFilter('all', this)">All Sub-Counties</button>
+    {% for sc in sub_counties %}
+        <button type="button" class="filter-pill" data-subcounty="{{ sc.id }}" onclick="setWardFilter('{{ sc.id }}', this)">{{ sc.name }}</button>
+    {% endfor %}
+</div>
+
+<div class="group" id="ward-table-list">
+    {% for ward in wards %}
+    <div class="group-row"
+         data-edit-url="{% url 'ward_edit' ward.pk %}"
+         data-subcounty="{{ ward.sub_county_id }}"
+         data-name="{{ ward.name }}"
+         data-subcounty-id="{{ ward.sub_county_id }}">
+        <div class="row-left">
+            <div class="avatar-chip">{{ ward.name|slice:":2"|upper }}</div>
+            <div>
+                <div class="cell-main">{{ ward.name }}</div>
+                <div class="cell-sub">{{ ward.sub_county.name }} Sub-County · {{ ward.teams.count }} team{{ ward.teams.count|pluralize }}</div>
+            </div>
+        </div>
+        <div class="row-right">
+            <button class="icon-btn" title="Edit" onclick="editWard(this)">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <p>No wards onboarded yet.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    /* ---- Sports ---- */
+    function addSport() {
+        document.getElementById('sport-form-title').innerText = 'Add New Sport';
+        document.getElementById('sport-form').action = "";
+        document.getElementById('sport-name-field').value = '';
+        document.getElementById('sport-rules-field').value = '';
+        document.getElementById('sport-players-field').value = '';
+        document.getElementById('sport-active-field').value = 'true';
+        document.getElementById('sport-form-submit').innerText = 'Save Sport';
+        document.getElementById('sport-form-panel').classList.add('active');
+    }
+    function editSport(btn) {
+        const row = btn.closest('.group-row');
+        document.getElementById('sport-form-title').innerText = `Edit ${row.dataset.name}`;
+        document.getElementById('sport-form').action = row.dataset.editUrl;
+        document.getElementById('sport-name-field').value = row.dataset.name;
+        document.getElementById('sport-rules-field').value = row.dataset.rules;
+        document.getElementById('sport-players-field').value = row.dataset.players;
+        document.getElementById('sport-active-field').value = row.dataset.active;
+        document.getElementById('sport-form-submit').innerText = 'Save Changes';
+        document.getElementById('sport-form-panel').classList.add('active');
+    }
+
+    /* ---- Sub-Counties ---- */
+    function addSubCounty() {
+        document.getElementById('subcounty-form-title').innerText = 'Add New Sub-County';
+        document.getElementById('subcounty-form').action = "";
+        document.getElementById('subcounty-name-field').value = '';
+        document.getElementById('subcounty-form-submit').innerText = 'Save Sub-County';
+        document.getElementById('subcounty-form-panel').classList.add('active');
+    }
+    function editSubCounty(btn) {
+        const row = btn.closest('.group-row');
+        document.getElementById('subcounty-form-title').innerText = `Edit ${row.dataset.name}`;
+        document.getElementById('subcounty-form').action = row.dataset.editUrl;
+        document.getElementById('subcounty-name-field').value = row.dataset.name;
+        document.getElementById('subcounty-form-submit').innerText = 'Save Changes';
+        document.getElementById('subcounty-form-panel').classList.add('active');
+    }
+
+    /* ---- Wards ---- */
+    function addWard() {
+        document.getElementById('ward-form-title').innerText = 'Add New Ward';
+        document.getElementById('ward-form').action = "";
+        document.getElementById('ward-name-field').value = '';
+        document.getElementById('ward-subcounty-field').value = '';
+        document.getElementById('ward-form-submit').innerText = 'Save Ward';
+        document.getElementById('ward-form-panel').classList.add('active');
+    }
+    function editWard(btn) {
+        const row = btn.closest('.group-row');
+        document.getElementById('ward-form-title').innerText = `Edit ${row.dataset.name}`;
+        document.getElementById('ward-form').action = row.dataset.editUrl;
+        document.getElementById('ward-name-field').value = row.dataset.name;
+        document.getElementById('ward-subcounty-field').value = row.dataset.subcountyId;
+        document.getElementById('ward-form-submit').innerText = 'Save Changes';
+        document.getElementById('ward-form-panel').classList.add('active');
+    }
+
+    function setWardFilter(subCountyId, btnElement) {
+        document.querySelectorAll('#ward-subcounty-pills .filter-pill').forEach(p => p.classList.remove('active'));
+        btnElement.classList.add('active');
+        document.querySelectorAll('#ward-table-list .group-row').forEach(row => {
+            row.style.display = (subCountyId === 'all' || row.dataset.subcounty === subCountyId) ? 'flex' : 'none';
+        });
+    }
+</script>
+{% endblock %}

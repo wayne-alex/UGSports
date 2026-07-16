@@ -1,0 +1,242 @@
+{% extends "superadmin_base.html" %}
+
+{% block title %}Staff Accounts — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}Personnel{% endblock %}
+{% block page_title %}Staff Accounts{% endblock %}
+
+{% block header_actions %}
+<button class="btn-primary" onclick="addStaff()">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    New Staff Account
+</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- ============= STAFF INLINE FORM (ADD/EDIT) ============= -->
+<div class="inline-form-panel" id="staff-form-panel">
+    <div class="form-panel-title" id="staff-form-title">Provision New Staff Account</div>
+    <!-- The form action is set dynamically by addStaff() and editStaff() -->
+    <form method="post" action="{% url 'staff_create' %}" id="staff-form">
+        {% csrf_token %}
+        <!-- staff_id hidden field maps to staff.pk -->
+        <input type="hidden" name="staff_id" id="staff-id-field">
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>First Name</label>
+                <input type="text" name="first_name" id="staff-first-name-field" placeholder="John" required>
+            </div>
+            <div class="form-field-box">
+                <label>Last Name</label>
+                <input type="text" name="last_name" id="staff-last-name-field" placeholder="Doe" required>
+            </div>
+            <div class="form-field-box">
+                <label>Email</label>
+                <input type="email" name="email" id="staff-email-field" placeholder="operator@ug.go.ke" required>
+            </div>
+            <div class="form-field-box">
+                <label>Phone Number</label>
+                <input type="tel" name="phone_number" id="staff-phone-field" placeholder="07XX XXX XXX">
+            </div>
+            <div class="form-field-box">
+                <label>Password</label>
+                <input type="password" name="password" id="staff-password-field" placeholder="********">
+            </div>
+            <div class="form-field-box">
+                <label>Role</label>
+                <select name="role" id="staff-role-field" onchange="handleRoleChange()" required>
+                    <option value="">Select a role</option>
+                    {% for role_value, role_label in role_choices %}
+                        <option value="{{ role_value }}">{{ role_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field-box" id="staff-subcounty-wrapper" style="display: none;">
+                <label>Sub-County</label>
+                <select name="sub_county" id="staff-subcounty-field">
+                    <option value="">Select a sub-county</option>
+                    {% for sc in sub_counties %}
+                        <option value="{{ sc.id }}">{{ sc.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field-box" id="staff-ward-wrapper" style="display: none;">
+                <label>Ward</label>
+                <select name="ward" id="staff-ward-field">
+                    <option value="">Select a ward</option>
+                    {% for ward in wards %}
+                        <option value="{{ ward.id }}" data-subcounty="{{ ward.sub_county_id }}">{{ ward.name }} — {{ ward.sub_county.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn-ghost" onclick="toggleFormPanel('staff-form-panel')">Cancel</button>
+            <button type="submit" class="btn-primary" id="staff-form-submit">Provision Account</button>
+        </div>
+    </form>
+</div>
+
+<!-- ============= SEARCH + FILTERS ============= -->
+<div class="search-shell">
+    <svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="staff-search-input" placeholder="Search by name or email..." onkeyup="filterStaffRows()">
+</div>
+
+<div class="filter-pills" id="staff-role-pills">
+    <button type="button" class="filter-pill active" data-role="all" onclick="setRoleFilter('all', this)">All Staff</button>
+    {% for role_value, role_label in role_choices %}
+        <button type="button" class="filter-pill" data-role="{{ role_value }}" onclick="setRoleFilter('{{ role_value }}', this)">{{ role_label }}</button>
+    {% endfor %}
+</div>
+
+<!-- ============= STAFF LIST ============= -->
+<div class="group-header-row">
+    <h3 class="group-header">All Staff</h3>
+    <span class="cell-sub">{{ staff_members|length }} account{{ staff_members|length|pluralize }}</span>
+</div>
+
+<div class="group" id="staff-list">
+    {% for staff in staff_members %}
+    <!-- Corrected: data-id="{{ staff.pk }}" added for JavaScript handling -->
+    <div class="group-row" data-id="{{ staff.pk }}" data-role="{{ staff.role }}" data-search="{{ staff.get_full_name|lower }} {{ staff.email|lower }}"
+         data-first-name="{{ staff.first_name }}" data-last-name="{{ staff.last_name }}" data-email="{{ staff.email }}"
+         data-phone="{{ staff.phone_number }}" data-role-value="{{ staff.role }}"
+         data-sub-county-id="{{ staff.sub_county_id|default:'' }}" data-ward-id="{{ staff.ward_id|default:'' }}">
+        <div class="row-left">
+            <div class="avatar-chip">{{ staff.first_name|slice:":1" }}{{ staff.last_name|slice:":1" }}</div>
+            <div>
+                <div class="cell-main">{{ staff.get_full_name }}</div>
+                <div class="cell-sub">{{ staff.email }} — {{ staff.scope_label }}</div>
+            </div>
+        </div>
+        <div class="row-right">
+            <span class="badge {% if staff.role == 'system_admin' or staff.role == 'county_ict' %}success{% else %}pending{% endif %}">
+                {{ staff.get_role_display }}
+            </span>
+            {% if staff.is_active %}
+                <span class="badge success">Active</span>
+            {% else %}
+                <span class="badge pending">Suspended</span>
+            {% endif %}
+            <button class="icon-btn" title="Edit" onclick="editStaff(this)">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </button>
+            <!-- Delete form with direct Django URL -->
+            <form method="post" action="{% url 'staff_delete' staff.pk %}" style="display: inline;" onsubmit="return confirm('Remove {{ staff.get_full_name }} from staff? This cannot be undone.');">
+                {% csrf_token %}
+                <button type="submit" class="icon-btn danger" title="Remove">
+                    <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <div class="icon">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        </div>
+        <p>No staff accounts yet. Provision a Ward Admin, Sub-County Admin, or County ICT Officer to get started.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div style="display: flex; justify-content: center; gap: 8px; margin-top: 20px;">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="btn-ghost">Previous</a>
+    {% endif %}
+    <span class="cell-sub" style="align-self: center;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="btn-ghost">Next</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const wardSelect = document.getElementById('staff-ward-field');
+    const wardOptions = Array.from(wardSelect.options);
+
+    function handleRoleChange() {
+        const role = document.getElementById('staff-role-field').value;
+        const subCountyWrapper = document.getElementById('staff-subcounty-wrapper');
+        const wardWrapper = document.getElementById('staff-ward-wrapper');
+
+        subCountyWrapper.style.display = 'none';
+        wardWrapper.style.display = 'none';
+        document.getElementById('staff-subcounty-field').required = false;
+        document.getElementById('staff-ward-field').required = false;
+
+        if (role === 'sub_county_admin') {
+            subCountyWrapper.style.display = 'flex';
+            document.getElementById('staff-subcounty-field').required = true;
+        } else if (role === 'ward_admin') {
+            wardWrapper.style.display = 'flex';
+            document.getElementById('staff-ward-field').required = true;
+        }
+    }
+
+    function setRoleFilter(role, btnElement) {
+        document.querySelectorAll('#staff-role-pills .filter-pill').forEach(p => p.classList.remove('active'));
+        btnElement.classList.add('active');
+        document.querySelectorAll('#staff-list .group-row').forEach(row => {
+            row.style.display = (role === 'all' || row.dataset.role === role) ? 'flex' : 'none';
+        });
+    }
+
+    function filterStaffRows() {
+        const query = document.getElementById('staff-search-input').value.toLowerCase();
+        document.querySelectorAll('#staff-list .group-row').forEach(row => {
+            row.style.display = row.dataset.search.includes(query) ? 'flex' : 'none';
+        });
+    }
+
+    function addStaff() {
+        // Construct and set the correct CREATE URL form action dynamically
+        document.getElementById('staff-form').action = '{% url "staff_create" %}';
+
+        document.getElementById('staff-form-title').innerText = 'Provision New Staff Account';
+        document.getElementById('staff-id-field').value = '';
+        document.getElementById('staff-first-name-field').value = '';
+        document.getElementById('staff-last-name-field').value = '';
+        document.getElementById('staff-email-field').value = '';
+        document.getElementById('staff-phone-field').value = '';
+        document.getElementById('staff-role-field').value = '';
+        handleRoleChange(); // Reset location fields
+        document.getElementById('staff-form-submit').innerText = 'Provision Account';
+        document.getElementById('staff-form-panel').classList.add('active');
+    }
+
+    function editStaff(btn) {
+        const row = btn.closest('.group-row');
+        document.getElementById('staff-form-title').innerText = `Edit ${row.dataset.firstName} ${row.dataset.lastName}`;
+
+        // Construct and set the correct EDIT URL form action dynamically using data-id
+        const baseUrl = '{% url "staff_edit" 0 %}';
+        document.getElementById('staff-form').action = baseUrl.replace('0', row.dataset.id);
+
+        // Populate fields from data attributes (make sure row has data-id)
+        document.getElementById('staff-id-field').value = row.dataset.id; // staff_id hidden field set to staff.pk
+        document.getElementById('staff-first-name-field').value = row.dataset.firstName;
+        document.getElementById('staff-last-name-field').value = row.dataset.lastName;
+        document.getElementById('staff-email-field').value = row.dataset.email;
+        document.getElementById('staff-phone-field').value = row.dataset.phone;
+        document.getElementById('staff-role-field').value = row.dataset.roleValue;
+        handleRoleChange(); // Show/hide location selectors
+
+        // Set sub-county/ward selects
+        if (row.dataset.subCountyId) {
+            document.getElementById('staff-subcounty-field').value = row.dataset.subCountyId;
+        }
+        if (row.dataset.wardId) {
+            document.getElementById('staff-ward-field').value = row.dataset.wardId;
+        }
+
+        document.getElementById('staff-form-submit').innerText = 'Save Changes';
+        document.getElementById('staff-form-panel').classList.add('active');
+    }
+</script>
+{% endblock %}

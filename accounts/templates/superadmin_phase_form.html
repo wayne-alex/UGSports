@@ -1,0 +1,67 @@
+{% extends "superadmin_base.html" %}
+{% block title %}New Phase — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ tournament.name }}{% endblock %}
+{% block page_title %}New Phase{% endblock %}
+{% block header_actions %}
+<a href="{% url 'tournament_detail' tournament.pk %}" class="btn-ghost">Cancel</a>
+{% endblock %}
+{% block content %}
+<div class="group" style="padding:24px;">
+    {% if form.non_field_errors %}
+    <div style="color:var(--rust); font-size:0.82rem; margin-bottom:12px;">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Stage</label>{{ form.stage }}
+                {% if form.stage.errors %}
+                <div style="color:var(--rust); font-size:0.75rem;">{{ form.stage.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="form-field-box">
+                <label>Status</label>{{ form.status }}
+            </div>
+            <div class="form-field-box" id="ward-field-box">
+                <label>Ward</label>{{ form.ward }}
+                {% if form.ward.errors %}
+                <div style="color:var(--rust); font-size:0.75rem;">{{ form.ward.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="form-field-box" id="subcounty-field-box">
+                <label>Sub-County</label>{{ form.sub_county }}
+                {% if form.sub_county.errors %}
+                <div style="color:var(--rust); font-size:0.75rem;">{{ form.sub_county.errors }}</div>
+                {% endif %}
+            </div>
+            <div class="form-field-box"><label>Start Date</label>{{ form.start_date }}</div>
+            <div class="form-field-box"><label>End Date</label>{{ form.end_date }}</div>
+        </div>
+        <div class="form-actions">
+            <a href="{% url 'tournament_detail' tournament.pk %}" class="btn-ghost">Cancel</a>
+            <button type="submit" class="btn-primary">Create Phase</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const stageField = document.getElementById('id_stage');
+        const wardBox = document.getElementById('ward-field-box');
+        const subCountyBox = document.getElementById('subcounty-field-box');
+
+        function syncScopeFields() {
+            const stage = stageField.value;
+            wardBox.style.display = stage === 'ward' ? 'flex' : 'none';
+            subCountyBox.style.display = stage === 'sub_county' ? 'flex' : 'none';
+        }
+
+        if (stageField) {
+            stageField.addEventListener('change', syncScopeFields);
+            syncScopeFields(); // run on load too, in case ?stage=ward was passed in
+        }
+    });
+</script>
+{% endblock %}

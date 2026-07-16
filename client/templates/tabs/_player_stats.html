@@ -1,0 +1,210 @@
+<style>
+    .scorer-row {
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .scorer-row:hover { background: #FAFBFC; }
+    .scorer-row:active { background: #F1F5F9; }
+
+    .scorer-view-icon {
+        width: 15px;
+        height: 15px;
+        stroke: var(--ink-faint);
+        stroke-width: 2.2;
+        fill: none;
+        flex-shrink: 0;
+        margin-left: 10px;
+    }
+
+    /* ---------- Player detail modal ---------- */
+    .player-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        z-index: 200;
+        display: none;
+        align-items: flex-end;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .player-modal-backdrop.open {
+        display: flex;
+        opacity: 1;
+    }
+    @media (min-width: 640px) {
+        .player-modal-backdrop { align-items: center; }
+    }
+
+    .player-modal {
+        background: var(--card);
+        width: 100%;
+        max-width: 420px;
+        border-radius: 22px 22px 0 0;
+        padding: 26px 24px 24px;
+        transform: translateY(24px);
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .player-modal-backdrop.open .player-modal { transform: translateY(0); }
+    @media (min-width: 640px) {
+        .player-modal { border-radius: 20px; }
+    }
+
+    .player-modal-close {
+        width: 30px; height: 30px;
+        border-radius: 50%;
+        border: none;
+        background: #F1F5F9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        float: right;
+        transition: background 0.15s ease;
+    }
+    .player-modal-close:hover { background: var(--line); }
+    .player-modal-close svg { width: 15px; height: 15px; stroke: var(--ink-soft); stroke-width: 2.4; }
+
+    .player-modal-header {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 22px;
+    }
+    .player-modal-jersey {
+        width: 52px; height: 52px;
+        border-radius: 14px;
+        background: linear-gradient(150deg, var(--pitch-light), var(--pitch-dark));
+        color: #fff;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.15rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .player-modal-name { font-size: 1.05rem; font-weight: 700; }
+    .player-modal-team { font-size: 0.8rem; color: var(--ink-soft); margin-top: 2px; }
+    .player-modal-position {
+        display: inline-block;
+        margin-top: 6px;
+        font-size: 0.6rem;
+        font-weight: 700;
+        color: var(--pitch);
+        background: #E9EEF1;
+        padding: 3px 9px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .player-modal-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 18px;
+    }
+    .player-modal-stat {
+        background: #FAFBFC;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 6px;
+        text-align: center;
+    }
+    .player-modal-stat .v {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--pitch);
+    }
+    .player-modal-stat .k {
+        font-size: 0.58rem;
+        font-weight: 700;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-top: 3px;
+    }
+
+    .player-modal-meta-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+        font-size: 0.8rem;
+    }
+    .player-modal-meta-row .k { color: var(--ink-soft); font-weight: 600; }
+    .player-modal-meta-row .v { font-weight: 600; }
+</style>
+
+<div class="sports-card">
+    {% for player in players|slice:":15" %}
+    <div class="scorer-row"
+         onclick="PlayerModal.open(this)"
+         data-name="{{ player.name }}"
+         data-team="{{ player.team.name }}"
+         data-position="{{ player.get_position_display|default:'Unassigned' }}"
+         data-jersey="{{ player.jersey_number }}"
+         data-goals="{{ player.goals }}"
+         data-assists="{{ player.assists }}"
+         data-yellow="{{ player.yellow_card }}"
+         data-red="{{ player.red_card }}">
+        <span class="scorer-rank">{{ forloop.counter }}</span>
+        <div style="flex:1;"><div class="scorer-name">{{ player.name }}</div><div class="scorer-team">{{ player.team.name }}</div></div>
+        <span class="scorer-goals">{{ player.goals }}</span>
+        <svg class="scorer-view-icon" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+    </div>
+    {% empty %}
+    <div class="empty-state"><p>No players registered yet.</p></div>
+    {% endfor %}
+</div>
+
+<div class="player-modal-backdrop" id="player-modal-backdrop" onclick="PlayerModal.close(event)">
+    <div class="player-modal" onclick="event.stopPropagation()">
+        <button class="player-modal-close" onclick="PlayerModal.close()">
+            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+        <div class="player-modal-header">
+            <div class="player-modal-jersey" id="pm-jersey">#0</div>
+            <div>
+                <div class="player-modal-name" id="pm-name"></div>
+                <div class="player-modal-team" id="pm-team"></div>
+                <span class="player-modal-position" id="pm-position"></span>
+            </div>
+        </div>
+        <div class="player-modal-stats">
+            <div class="player-modal-stat"><div class="v" id="pm-goals">0</div><div class="k">Goals</div></div>
+            <div class="player-modal-stat"><div class="v" id="pm-assists">0</div><div class="k">Assists</div></div>
+            <div class="player-modal-stat"><div class="v" id="pm-yellow">0</div><div class="k">Yellows</div></div>
+            <div class="player-modal-stat"><div class="v" id="pm-red">0</div><div class="k">Reds</div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.PlayerModal = window.PlayerModal || {
+        open(row) {
+            const d = row.dataset;
+            document.getElementById('pm-jersey').textContent = '#' + d.jersey;
+            document.getElementById('pm-name').textContent = d.name;
+            document.getElementById('pm-team').textContent = d.team;
+            document.getElementById('pm-position').textContent = d.position;
+            document.getElementById('pm-goals').textContent = d.goals;
+            document.getElementById('pm-assists').textContent = d.assists;
+            document.getElementById('pm-yellow').textContent = d.yellow;
+            document.getElementById('pm-red').textContent = d.red;
+            document.getElementById('player-modal-backdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        },
+        close(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('player-modal-backdrop').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+    };
+</script>

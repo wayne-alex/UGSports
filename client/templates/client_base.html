@@ -1,0 +1,210 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{% block title %}UG Sports{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --pitch: #1B4332; --pitch-dark: #0C2417; --ochre: #D98A3D; --ochre-deep: #B36B23;
+        --rust: #C1440E; --bg: #F8FAFC; --card: #FFFFFF; --ink: #0F172A; --ink-soft: #64748B;
+        --line: #E2E8F0; --header-h: 64px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--ink); -webkit-font-smoothing:antialiased; min-height:100vh; }
+    h1,h2,h3,h4 { font-family:'Space Grotesk',sans-serif; }
+    .mono { font-family:'JetBrains Mono',monospace; font-variant-numeric:tabular-nums; }
+
+    .header { position:fixed; top:0; left:0; width:100%; height:var(--header-h); background:var(--pitch); padding:0 24px; color:#fff; z-index:200; display:flex; align-items:center; }
+    .header-row { display:flex; align-items:center; justify-content:space-between; max-width:1300px; margin:0 auto; width:100%; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .crest { width:38px; height:38px; border-radius:10px; background:rgba(255,255,255,.1); display:flex; align-items:center; justify-content:center; }
+    .crest img { width:24px; height:24px; object-fit:contain; }
+    .brand-title h1 { font-size:1.02rem; font-weight:700; }
+    .brand-title p { font-size:.62rem; color:var(--ochre); font-weight:600; text-transform:uppercase; letter-spacing:1.2px; margin-top:1px; }
+    .back-btn { width:38px; height:38px; border-radius:10px; background:rgba(255,255,255,.1); border:none; cursor:pointer; display:none; align-items:center; justify-content:center; }
+    .back-btn.visible { display:flex; }
+    .back-btn svg { width:19px; height:19px; fill:none; stroke:#fff; stroke-width:2.2; }
+
+    .layout { max-width:1300px; margin:0 auto; display:flex; flex-direction:column; padding-top:var(--header-h); padding-bottom:84px; }
+    .content-col { display:flex; flex-direction:column; }
+    .main-content { padding:20px 24px; }
+
+    .section { display:none; }
+    .section.active { display:block; }
+    .section-loading { padding:60px 20px; text-align:center; color:var(--ink-soft); font-size:.85rem; }
+    .section-loading .spinner { width:22px; height:22px; border:2.5px solid var(--line); border-top-color:var(--pitch); border-radius:50%; margin:0 auto 12px; animation:spin .7s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    .nav { position:fixed; bottom:0; left:0; width:100%; height:72px; background:rgba(255,255,255,.97); backdrop-filter:blur(10px); border-top:1px solid var(--line); display:flex; justify-content:space-around; align-items:center; z-index:100; }
+    .nav-btn { display:flex; flex-direction:column; align-items:center; gap:4px; color:#94A3B8; font-size:.62rem; font-weight:600; cursor:pointer; }
+    .nav-btn svg { width:20px; height:20px; fill:none; stroke:#94A3B8; stroke-width:2; }
+    .nav-btn.active { color:var(--pitch); }
+    .nav-btn.active svg { stroke:var(--pitch); }
+
+    @media (min-width:768px) {
+        .layout { padding-bottom:0; display:grid; grid-template-columns:220px 1fr; padding-top:0; }
+        .content-col { grid-column:2; margin-top:var(--header-h); }
+        .nav { position:static; width:auto; height:auto; flex-direction:column; justify-content:flex-start; align-items:stretch; padding:24px 14px; gap:4px; background:transparent; border-top:none; border-right:1px solid var(--line); margin-top:var(--header-h); grid-column:1; }
+        .nav-btn { flex-direction:row; padding:10px 12px; border-radius:8px; gap:12px; font-size:.85rem; }
+        .nav-btn:hover { background:#E2E8F0; color:var(--ink); }
+        .nav-btn.active { background:var(--pitch); color:#fff; }
+        .nav-btn.active svg { stroke:#fff; }
+        .main-content { padding-left:28px; padding-right:28px; }
+    }
+</style>
+{% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<div class="header">
+    <div class="header-row">
+        <div class="brand">
+            <button class="back-btn" id="shell-back-btn" onclick="Shell.back()" aria-label="Back">
+                <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            </button>
+            <div class="crest"><img src="{% static 'UG_LOGO.png' %}" alt="Logo"></div>
+            <div class="brand-title"><h1 id="shell-title">UG Sports</h1><p id="shell-subtitle">Tournament Lobby</p></div>
+        </div>
+    </div>
+</div>
+
+<div class="layout">
+    <nav class="nav" id="shell-nav">
+        <div class="nav-btn active" data-nav="lobby" onclick="Shell.goto('lobby', '{% url 'client_lobby_section' %}')">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+            <span>Lobby</span>
+        </div>
+        <div class="nav-btn" data-nav="favorites" onclick="Shell.goto('favorites', null)">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <span>Favorites</span>
+        </div>
+    </nav>
+
+    <div class="content-col">
+        <div class="main-content">
+            <div id="app-sections">
+                {% block initial_section %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ===== Shell: section cache + router + polling ===== */
+const Shell = {
+    stack: [],
+    pollers: {},
+
+    goto(id, url, pushUrl) {
+        const existing = document.getElementById('section-' + id);
+        if (existing) {
+            this._show(id);
+        } else if (url) {
+            this._load(id, url);
+        } else {
+            this._loadStatic(id);
+        }
+        this.stack.push(id);
+        document.getElementById('shell-back-btn').classList.toggle('visible', this.stack.length > 1);
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
+        if (pushUrl !== false) history.pushState({sectionId: id, url}, '', url || location.pathname);
+    },
+    refresh(id, url) {
+        if (this.pollers[id]) {
+            Object.values(this.pollers[id]).forEach(p => { if (p.timer) clearInterval(p.timer); });
+            delete this.pollers[id];
+        }
+        const el = document.getElementById('section-' + id);
+        if (!el) return;
+        el.innerHTML = '<div class="section-loading"><div class="spinner"></div>Loading…</div>';
+        fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}}).then(r => r.text()).then(html => {
+            el.innerHTML = html;
+            this._runScoped(el);
+            this._syncPollers(id);
+        });
+    },
+
+    back() {
+        if (this.stack.length > 1) {
+            this.stack.pop();
+            const prev = this.stack[this.stack.length - 1];
+            this._show(prev);
+            this.stack.pop(); // goto will re-push
+            this.goto(prev, null, false);
+        }
+    },
+
+    _show(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById('section-' + id);
+        if (el) el.classList.add('active');
+        this._syncPollers(id);
+    },
+
+    async _load(id, url) {
+        const container = document.getElementById('app-sections');
+        const placeholder = document.createElement('div');
+        placeholder.className = 'section active';
+        placeholder.id = 'section-' + id;
+        placeholder.innerHTML = '<div class="section-loading"><div class="spinner"></div>Loading…</div>';
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        container.appendChild(placeholder);
+
+        const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+        placeholder.innerHTML = await res.text();
+        this._runScoped(placeholder);
+        this._syncPollers(id);
+    },
+
+    _loadStatic(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        const el = document.getElementById('section-' + id);
+        if (el) el.classList.add('active');
+    },
+
+    _runScoped(container) {
+        container.querySelectorAll('script').forEach(old => {
+            const s = document.createElement('script');
+            s.textContent = old.textContent;
+            old.replaceWith(s);
+        });
+    },
+
+    /* Polling: each section can register {url, targetId, intervalMs} via window.ShellPoll(...) */
+    registerPoll(sectionId, key, url, targetId, intervalMs) {
+        this.pollers[sectionId] = this.pollers[sectionId] || {};
+        this.pollers[sectionId][key] = {url, targetId, intervalMs, timer: null};
+    },
+
+    _syncPollers(activeId) {
+        Object.entries(this.pollers).forEach(([sectionId, entries]) => {
+            Object.values(entries).forEach(p => {
+                if (sectionId === activeId && !p.timer) {
+                    const tick = async () => {
+                        const res = await fetch(p.url);
+                        const el = document.getElementById(p.targetId);
+                        if (el && res.ok) el.innerHTML = await res.text();
+                    };
+                    tick();
+                    p.timer = setInterval(tick, p.intervalMs);
+                } else if (sectionId !== activeId && p.timer) {
+                    clearInterval(p.timer);
+                    p.timer = null;
+                }
+            });
+        });
+    }
+};
+
+window.addEventListener('popstate', (e) => {
+    if (e.state && e.state.sectionId) Shell.goto(e.state.sectionId, e.state.url, false);
+});
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

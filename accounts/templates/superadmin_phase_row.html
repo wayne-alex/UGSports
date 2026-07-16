@@ -1,0 +1,29 @@
+<div class="group-row" onclick="window.location.href='{% url 'phase_detail' phase.pk %}'" style="cursor:pointer;">
+    <div class="row-left">
+        <div class="avatar-chip">{{ avatar }}</div>
+        <div>
+            <div class="cell-main">{{ phase.scope_label }}</div>
+            <div class="cell-sub">{{ phase.team_count }} team{{ phase.team_count|pluralize }} &middot; {{ phase.fixture_count }} fixture{{ phase.fixture_count|pluralize }}</div>
+        </div>
+    </div>
+    <div class="row-right" style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+        <div>
+            {% if phase.status == 'ongoing' %}
+                <span class="badge live"><span class="live-dot"></span>Live</span>
+            {% elif phase.status == 'upcoming' %}
+                <span class="badge pending">Upcoming</span>
+            {% else %}
+                <span class="badge success">Completed</span>
+            {% endif %}
+        </div>
+        <div onclick="event.stopPropagation();" style="display:flex; align-items:center; gap:2px;">
+            <a href="{% url 'phase_edit' phase.pk %}" class="icon-btn" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </a>
+            <a href="{% url 'phase_delete' phase.pk %}" class="icon-btn danger" title="Delete"
+               onclick="return confirm('Delete this phase? This cannot be undone.');">
+                <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </a>
+        </div>
+    </div>
+</div>

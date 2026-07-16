@@ -1,0 +1,161 @@
+<style>
+    .league-row.qualifies {
+        border-left: 3px solid var(--ochre);
+        background: linear-gradient(90deg, rgba(217,138,61,0.05), transparent 40%);
+    }
+    .col-wide { width: 26px; }
+
+    .group-block { margin-bottom: 18px; }
+    .group-block:last-child { margin-bottom: 0; }
+    .group-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.66rem;
+        font-weight: 700;
+        letter-spacing: 0.6px;
+        color: var(--pitch);
+        background: #E9EEF1;
+        padding: 3px 10px;
+        border-radius: 6px;
+    }
+    .qualify-note {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 18px;
+        font-size: 0.66rem;
+        font-weight: 600;
+        color: var(--ink-soft);
+        border-top: 1px dashed var(--line);
+        background: #FAFBFC;
+    }
+    .qualify-note .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ochre); flex-shrink: 0; }
+
+    .draw-redirect {
+        padding: 40px 22px;
+        text-align: center;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .draw-redirect:hover { background: #FAFBFC; }
+    .draw-redirect .icon {
+        width: 46px;
+        height: 46px;
+        margin: 0 auto 14px;
+        border-radius: 50%;
+        background: #E9EEF1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .draw-redirect .icon svg {
+        width: 21px;
+        height: 21px;
+        stroke: var(--pitch);
+        stroke-width: 2.2;
+        fill: none;
+    }
+    .draw-redirect p {
+        font-size: 0.82rem;
+        color: var(--ink-soft);
+        max-width: 260px;
+        margin: 0 auto 12px;
+        line-height: 1.6;
+    }
+    .draw-redirect .link {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        color: var(--pitch);
+    }
+    .draw-redirect .link svg {
+        width: 13px;
+        height: 13px;
+        stroke: var(--pitch);
+        stroke-width: 2.4;
+        fill: none;
+    }
+</style>
+
+{% for ps in phase_sports %}
+<div class="sports-card">
+    <div class="card-top-bar">
+        <span>{{ ps.sport.name }}</span>
+        <span>{{ selected_phase.scope_label }}</span>
+    </div>
+
+    {% if ps.fixture_format == 'group_knockout' %}
+        {# ---------- GROUP STAGE TABLES, computed live from fixtures/results ---------- #}
+        {% for group in ps.groups.all %}
+        <div class="group-block">
+            <div class="league-table-header">
+                <div class="col-team"><span class="group-badge">GROUP {{ group.name }}</span></div>
+                <div class="col-data">P</div>
+                <div class="col-data">GD</div>
+                <div class="col-data col-wide">PTS</div>
+            </div>
+            {% for row in group.computed_standings %}
+            <div class="league-row {% if forloop.counter <= 2 %}qualifies{% endif %}">
+                <div class="team-meta">
+                    <span class="team-pos">{{ forloop.counter }}</span>
+                    <div class="kit-badge">{{ row.team.name|slice:":2"|upper }}</div>
+                    <span class="team-lbl">{{ row.team.name }}</span>
+                </div>
+                <div class="cell-data">{{ row.played }}</div>
+                <div class="cell-data">{{ row.goal_difference }}</div>
+                <div class="cell-data bold">{{ row.points }}</div>
+            </div>
+            {% empty %}
+            <div class="empty-state"><p>No standings yet for this group.</p></div>
+            {% endfor %}
+            <div class="qualify-note"><span class="dot"></span> Top 2 advance to the knockout stage</div>
+        </div>
+        {% empty %}
+        <div class="empty-state"><p>Groups haven't been drawn yet.</p></div>
+        {% endfor %}
+
+        <div class="draw-redirect" data-jump="draw">
+            <div class="icon"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg></div>
+            <p>Knockout bracket for this sport is on the Draw tab, once groups are settled.</p>
+            <span class="link">Go to Draw <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></span>
+        </div>
+
+    {% elif ps.fixture_format == 'knockout' %}
+        {# ---------- PURE KNOCKOUT: no table, just point to Draw ---------- #}
+        <div class="draw-redirect" data-jump="draw">
+            <div class="icon"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg></div>
+            <p>{{ ps.sport.name }} runs as a knockout — see the bracket on the Draw tab.</p>
+            <span class="link">Go to Draw <svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></span>
+        </div>
+
+    {% else %}
+        {# ---------- LEAGUE / UEFA LEAGUE PHASE: flat table, computed live ---------- #}
+        <div class="league-table-header">
+            <div class="col-team">Team</div>
+            <div class="col-data">P</div>
+            <div class="col-data">GD</div>
+            <div class="col-data col-wide">PTS</div>
+        </div>
+        {% for row in ps.computed_standings %}
+        <div class="league-row">
+            <div class="team-meta">
+                <span class="team-pos">{{ forloop.counter }}</span>
+                <div class="kit-badge">{{ row.team.name|slice:":2"|upper }}</div>
+                <span class="team-lbl">{{ row.team.name }}</span>
+            </div>
+            <div class="cell-data">{{ row.played }}</div>
+            <div class="cell-data">{{ row.goal_difference }}</div>
+            <div class="cell-data bold">{{ row.points }}</div>
+        </div>
+        {% empty %}
+        <div class="empty-state"><p>No standings available yet.</p></div>
+        {% endfor %}
+    {% endif %}
+</div>
+{% empty %}
+<div class="sports-card empty-state"><p>No sports have been added to this phase yet.</p></div>
+{% endfor %}

@@ -1,0 +1,130 @@
+<div class="ph-bar" id="ph-bar-{{ tournament.pk }}"
+     data-base-url="{% url 'client_dashboard' tournament.pk %}">
+
+    <div class="ph-select" data-select="phase">
+        <button type="button" class="ph-trigger" onclick="PhaseSelector.toggle({{ tournament.pk }}, this)">
+            <svg class="ph-icon" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="ph-value">{{ selected_phase.scope_label|default:"Select phase" }}</span>
+            <svg class="ph-chevron" viewBox="0 0 24 24"><path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/></svg>
+        </button>
+        <div class="ph-menu">
+            {% for phase in phases %}
+            <div class="ph-option {% if selected_phase.pk == phase.pk %}selected{% endif %}"
+                 data-value="{{ phase.pk }}"
+                 onclick="PhaseSelector.choose({{ tournament.pk }}, this)">
+                <span>{{ phase.scope_label }}</span>
+                <svg class="ph-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+            </div>
+            {% empty %}
+            <div class="ph-option" style="cursor:default;"><span>No phases created yet</span></div>
+            {% endfor %}
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .ph-bar { display: flex; padding: 14px 20px; background: var(--bg); border-bottom: 1px solid var(--line); }
+    .ph-select { position: relative; width: 100%; max-width: 260px; }
+
+    .ph-trigger {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 11px;
+        padding: 10px 12px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--ink);
+        cursor: pointer;
+        text-align: left;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .ph-trigger:hover { border-color: #CBD5E1; }
+    .ph-select.open .ph-trigger { border-color: var(--pitch); box-shadow: 0 0 0 3px rgba(27,67,50,0.08); }
+
+    .ph-icon { width: 15px; height: 15px; stroke: var(--pitch); fill: none; flex-shrink: 0; }
+    .ph-value { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ph-chevron { width: 14px; height: 14px; stroke: var(--ink-soft); stroke-width: 2.5; fill: none; transition: transform 0.15s ease; flex-shrink: 0; }
+    .ph-select.open .ph-chevron { transform: rotate(180deg); }
+
+    .ph-menu {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0; right: 0;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: 0 12px 30px rgba(15,23,42,0.14);
+        padding: 6px;
+        z-index: 60;
+        max-height: 280px;
+        overflow-y: auto;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-6px);
+        transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+    }
+    .ph-select.open .ph-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+
+    .ph-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 9px 10px;
+        font-size: 0.82rem;
+        font-weight: 500;
+        color: var(--ink);
+        border-radius: 8px;
+        cursor: pointer;
+    }
+    .ph-option:hover { background: #F1F5F9; }
+    .ph-option.selected { font-weight: 700; color: var(--pitch); }
+    .ph-check { width: 14px; height: 14px; stroke: var(--pitch); stroke-width: 2.6; fill: none; opacity: 0; }
+    .ph-option.selected .ph-check { opacity: 1; }
+</style>
+
+<script>
+(function() {
+    if (window.PhaseSelector) return;
+
+    window.PhaseSelector = {
+        toggle(pk, triggerBtn) {
+            const select = triggerBtn.closest('.ph-select');
+            const isOpen = select.classList.contains('open');
+            document.querySelectorAll('#ph-bar-' + pk + ' .ph-select.open').forEach(s => s.classList.remove('open'));
+            if (!isOpen) select.classList.add('open');
+        },
+
+        choose(pk, optionEl) {
+            const select = optionEl.closest('.ph-select');
+
+            // Visual updates
+            select.querySelectorAll('.ph-option').forEach(o => o.classList.remove('selected'));
+            optionEl.classList.add('selected');
+            select.querySelector('.ph-value').textContent = optionEl.querySelector('span').textContent;
+            select.classList.remove('open');
+
+            // Build the URL with the selected phase
+            const bar = document.getElementById('ph-bar-' + pk);
+            const baseUrl = bar.dataset.baseUrl;
+            const phaseId = optionEl.dataset.value;
+            const qs = phaseId ? ('?phase=' + phaseId) : '';
+
+            // FIX: Navigate to the new URL directly so Django can re-render the page
+            // with the correct phase context.
+            window.location.href = baseUrl + qs;
+        }
+    };
+
+    document.addEventListener('click', function (e) {
+        if (!e.target.closest('.ph-select')) {
+            document.querySelectorAll('.ph-select.open').forEach(s => s.classList.remove('open'));
+        }
+    });
+})();
+</script>

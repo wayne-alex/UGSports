@@ -1,0 +1,77 @@
+{% extends "subcounty/subcountyadmin_base.html" %}
+{% block title %}Dashboard — {{ sub_county.name }} Sub-County{% endblock %}
+{% block page_eyebrow %}{{ sub_county.name }} Sub-County{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <h3>Active Phases</h3>
+        <p>{{ active_phase_count }}<span>ongoing or upcoming</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Teams</h3>
+        <p>{{ team_count }}<span>entered from your sub-county</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Players</h3>
+        <p>{{ player_count }}<span>across all wards</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Pending Results</h3>
+        <p>{{ pending_results_count }}<span>awaiting verification</span></p>
+    </div>
+</div>
+
+<div class="group-header-row" style="margin-top:28px;">
+    <h3 class="group-header">Upcoming Fixtures</h3>
+    <a href="{% url 'subcounty_tournament' %}" class="btn-ghost">View All</a>
+</div>
+<div class="group">
+    {% for fixture in upcoming_fixtures %}
+    <div class="group-row">
+        <div class="row-left">
+            <div class="avatar-chip mono">R{{ fixture.round_number }}</div>
+            <div>
+                <div class="cell-main">{{ fixture.home_team.name }} vs {{ fixture.away_team.name }}</div>
+                <div class="cell-sub">
+                    {{ fixture.phase_sport.sport.name }}
+                    {% if fixture.kickoff_at %} &middot; {{ fixture.kickoff_at|date:"D, d M · H:i" }}{% else %} &middot; Not scheduled{% endif %}
+                </div>
+            </div>
+        </div>
+        <span class="badge pending">Scheduled</span>
+    </div>
+    {% empty %}
+    <div class="empty-state"><p>No upcoming fixtures for your sub-county right now.</p></div>
+    {% endfor %}
+</div>
+
+<div class="group-header-row" style="margin-top:28px;">
+    <h3 class="group-header">Your Sub-County's Phases</h3>
+</div>
+<div class="group">
+    {% for phase in sc_phases %}
+    <div class="group-row" onclick="window.location.href='{% url 'subcounty_tournament' %}'" style="cursor:pointer;">
+        <div class="row-left">
+            <div class="avatar-chip">{{ phase.tournament.crest_code }}</div>
+            <div>
+                <div class="cell-main">{{ phase.tournament.name }}</div>
+                <div class="cell-sub">{{ phase.tournament.season }} &middot; {{ phase.get_stage_display }}</div>
+            </div>
+        </div>
+        {% if phase.status == 'ongoing' %}
+            <span class="badge live"><span class="live-dot"></span>Live</span>
+        {% elif phase.status == 'upcoming' %}
+            <span class="badge pending">Upcoming</span>
+        {% else %}
+            <span class="badge success">Completed</span>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="empty-state"><p>Your sub-county hasn't been entered into a tournament phase yet.</p></div>
+    {% endfor %}
+</div>
+
+{% endblock %}

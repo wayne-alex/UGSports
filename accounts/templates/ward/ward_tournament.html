@@ -1,0 +1,450 @@
+{% extends "ward/wardadmin_base.html" %}
+{% load dict_extras %}
+
+{% block title %}Tournaments Portal | {{ ward.name }} Ward{% endblock %}
+{% block page_eyebrow %}{{ ward.name }} Ward{% endblock %}
+{% block page_title %}Tournament Workspace{% endblock %}
+
+{% block header_actions %}
+<button type="button" class="btn-primary" onclick="toggleFormPanel('new-tournament-panel')">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    New Tournament
+</button>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* Desktop Split-Screen Grid Layout */
+    .portal-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 28px;
+        align-items: start;
+    }
+
+    @media (min-width: 992px) {
+        .portal-layout {
+            grid-template-columns: 320px 1fr;
+        }
+    }
+
+    /* Left Sidebar Phase Menu Card */
+    .sidebar-card {
+        background: #ffffff;
+        border: 1px solid var(--line, #e2e8f0);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .phase-link {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        color: #334155;
+        margin-bottom: 8px;
+        transition: all 0.15s ease;
+        border: 1px solid transparent;
+    }
+
+    .phase-link:hover {
+        background: #f8fafc;
+        border-color: var(--line, #cbd5e1);
+    }
+
+    .phase-link.active {
+        background: #f0fdf4;
+        border-color: var(--pitch, #1f874b);
+        color: #145e33;
+    }
+
+    /* Workspace Card styling */
+    .workspace-wrapper {
+        background: #ffffff;
+        border: 1px solid var(--line, #e2e8f0);
+        border-radius: 12px;
+        padding: 24px;
+        min-height: 450px;
+    }
+
+    .team-row-link {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+    }
+    .team-row-link:not(:last-child) {
+        border-bottom: 1px solid var(--line, #e2e8f0);
+    }
+    .team-row-clickable {
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+    .team-row-clickable:hover {
+        background-color: #f8fafc;
+    }
+    .team-name-text {
+        font-weight: 600;
+        color: var(--pitch, #1f874b);
+    }
+    .team-row-clickable:hover .team-name-text {
+        text-decoration: underline;
+    }
+
+    /* Action Buttons Styles */
+    .fixture-card-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        border-top: 1px solid var(--line, #f1f5f9);
+        padding-top: 12px;
+        margin-top: 12px;
+    }
+    .icon-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        border: 1px solid var(--line, #e2e8f0);
+        background: #fff;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+    .icon-btn:hover {
+        background: #f8fafc;
+        color: #0f172a;
+        border-color: #cbd5e1;
+    }
+    .icon-btn svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+    }
+</style>
+
+<div class="inline-form-panel {% if open_form_panel %}active{% endif %}" id="new-tournament-panel">
+    <div class="form-panel-title">Create Tournament — {{ ward.name }} Ward</div>
+    {% if form.non_field_errors %}
+        <div style="color:var(--rust); font-size:0.82rem; margin-bottom:12px;">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <form method="post" action="{% url 'ward_tournament' %}">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Name</label>{{ form.name }}
+                {{ form.name.errors }}
+            </div>
+            <div class="form-field-box">
+                <label>Season</label>{{ form.season }}
+                {{ form.season.errors }}
+            </div>
+            <div class="form-field-box">
+                <label>Status</label>{{ form.status }}
+                {{ form.status.errors }}
+            </div>
+            <div class="form-field-box">
+                <label>Start Date</label>{{ form.start_date }}
+                {{ form.start_date.errors }}
+            </div>
+            <div class="form-field-box">
+                <label>End Date</label>{{ form.end_date }}
+                {{ form.end_date.errors }}
+            </div>
+        </div>
+        <div class="form-field-box" style="margin-bottom:16px;">
+            <label>Sports</label>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:4px;">
+                {% for checkbox in form.sports %}
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:500;">
+                    {{ checkbox.tag }} {{ checkbox.choice_label }}
+                </label>
+                {% endfor %}
+            </div>
+            {{ form.sports.errors }}
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn-ghost" onclick="toggleFormPanel('new-tournament-panel')">Cancel</button>
+            <button type="submit" class="btn-primary">Create Tournament</button>
+        </div>
+    </form>
+</div>
+
+<div class="portal-layout">
+
+    <!-- LEFT SIDEBAR: Phase selector -->
+    <div class="sidebar-menu">
+        <div class="sidebar-card">
+            <h3 class="group-header" style="margin-top:0; margin-bottom:12px; font-size: 0.95rem;">Select Phase</h3>
+
+            {% for phase in ward_phases %}
+                <a href="?phase_id={{ phase.pk }}" class="phase-link {% if selected_phase.pk == phase.pk %}active{% endif %}">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="avatar-chip" style="width: 32px; height: 32px; font-size: 0.75rem;">
+                            {{ phase.tournament.crest_code|default:"UG" }}
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.85rem; line-height: 1.2;">{{ phase.tournament.name }}</div>
+                            <div style="font-size: 0.75rem; color: #64748b;">{{ phase.get_stage_display }}</div>
+                        </div>
+                    </div>
+                    {% if phase.status == 'ongoing' %}
+                        <span class="live-dot" style="margin-left: 6px;"></span>
+                    {% endif %}
+                </a>
+            {% empty %}
+                <div class="empty-state" style="padding: 20px 10px;">
+                    <p style="font-size: 0.8rem;">No tournament phases assigned to your ward yet.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- RIGHT MAIN PANELS: Workspace Tabs -->
+    <div class="workspace-wrapper">
+        {% if selected_phase %}
+            <!-- Header Metadata -->
+            <div style="border-bottom: 1px solid var(--line, #e2e8f0); padding-bottom: 16px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+                <div>
+                    <h2 style="font-size: 1.3rem; font-weight: 800; color: #0f172a; margin: 0;">{{ selected_phase.tournament.name }}</h2>
+                    <p style="color: #64748b; font-size: 0.85rem; margin: 4px 0 0 0;">
+                        Season: {{ selected_phase.tournament.season }} &middot; Stage: <strong>{{ selected_phase.get_stage_display }}</strong>
+                    </p>
+                </div>
+                <div>
+                    {% if selected_phase.status == 'ongoing' %}
+                        <span class="badge live"><span class="live-dot"></span>Live Phase</span>
+                    {% elif selected_phase.status == 'upcoming' %}
+                        <span class="badge pending">Upcoming Phase</span>
+                    {% else %}
+                        <span class="badge success">Completed Phase</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tabs selector (Redundant Rosters/Squad tab has been removed!) -->
+            <div class="filter-pills" id="workspace-tab-bar" style="margin-bottom: 24px;">
+                <button type="button" class="filter-pill active" data-pane="teams" onclick="switchTab('teams', this)">Registered Teams ({{ teams|length }})</button>
+                <button type="button" class="filter-pill" data-pane="fixtures" onclick="switchTab('fixtures', this)">Match Fixtures ({{ fixtures|length }})</button>
+                <button type="button" class="filter-pill" data-pane="results" onclick="switchTab('results', this)">Results Ledgers</button>
+            </div>
+
+            <!-- ============= TAB: TEAMS ============= -->
+            <div class="workspace-pane" id="pane-teams">
+                <div class="group-header-row">
+                    <h3 class="group-header">Ward Teams Participating</h3>
+                    <a href="{% url 'ward_team_create' selected_phase.pk %}" class="btn-ghost">+ Add Local Team</a>
+                </div>
+                <div class="group">
+                    {% for team in teams %}
+                        <!-- This links directly to the detailed inline player workspace page -->
+                        <a href="{% url 'ward_manage_team' team.pk %}?from_phase={{ selected_phase.pk }}" class="team-row-link">
+                            <div class="group-row team-row-clickable">
+                                <div class="row-left">
+                                    <div class="avatar-chip">{{ team.name|slice:":2"|upper }}</div>
+                                    <div>
+                                        <div class="cell-main team-name-text">{{ team.name }}</div>
+                                        <div class="cell-sub">{{ team.sport.name }} &middot; Squad Size: {{ team.players.count }} players</div>
+                                    </div>
+                                </div>
+                                <div class="row-right">
+                                    <span class="btn-ghost" style="font-size:0.75rem;">Manage Squad &rarr;</span>
+                                </div>
+                            </div>
+                        </a>
+                    {% empty %}
+                        <div class="empty-state">
+                            <p>No teams from your ward are registered in this phase.</p>
+                            <a href="{% url 'team_create' selected_phase.pk %}" class="btn-primary" style="margin-top: 12px; display: inline-block; padding: 8px 16px; border-radius: 6px; font-weight:600; text-decoration:none;">
+                                Register Your First Team
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+
+<!-- ============= TAB: FIXTURES ============= -->
+<div class="workspace-pane" id="pane-fixtures" style="display:none;">
+
+    {% if postponed_fixtures %}
+    <div class="group-header-row">
+        <h3 class="group-header">Postponed</h3>
+        <span class="cell-sub">{{ postponed_fixtures|length }} fixture{{ postponed_fixtures|length|pluralize }} need rescheduling</span>
+    </div>
+    <div class="fixture-card-grid" style="margin-bottom:26px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+        {% for fixture in postponed_fixtures %}
+        <div class="fixture-card postponed" style="border: 1px solid var(--rust, #ef4444); border-radius: 8px; padding: 16px; background: #fff5f5;">
+            <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                <span class="badge" style="background:var(--rust, #ef4444); color:#fff; font-size:0.7rem;">Postponed</span>
+                <span style="font-size: 0.75rem; color: #64748b;">R{{ fixture.round_number }}</span>
+            </div>
+            <div class="fixture-card-teams" style="margin: 12px 0;">
+                <div style="display: flex; justify-content: space-between; font-weight: 500; font-size: 0.85rem;">
+                    <span>{{ fixture.home_team.name }}</span><span style="color:#94a3b8;">?</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: 500; font-size: 0.85rem; margin-top: 4px;">
+                    <span>{{ fixture.away_team.name }}</span><span style="color:#94a3b8;">?</span>
+                </div>
+            </div>
+            <div class="fixture-card-actions">
+                <a href="{% url 'ward_edit_fixture' fixture.pk %}?from_phase={{ selected_phase.pk }}" class="btn-primary" style="flex:1; text-align:center; font-size:0.8rem; padding: 6px;">
+                    Reschedule
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if fixture_dates or has_unscheduled %}
+    <div class="filter-pills" id="fixture-date-pills" style="margin-bottom: 20px;">
+        <button type="button" class="filter-pill active" data-date="all" onclick="setDateFilter('all', this)">All Dates</button>
+        {% for d in fixture_dates %}
+        <button type="button" class="filter-pill" data-date="{{ d|date:'Y-m-d' }}" onclick="setDateFilter('{{ d|date:'Y-m-d' }}', this)">{{ d|date:"D, d M" }}</button>
+        {% endfor %}
+        {% if has_unscheduled %}
+        <button type="button" class="filter-pill" data-date="unscheduled" onclick="setDateFilter('unscheduled', this)">Unscheduled</button>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% for row in sport_rows %}
+    {% with ps=row.phase_sport sport=row.sport %}
+    <div class="group-header-row" style="margin-top: 16px;">
+        <h3 class="group-header">{{ sport.name }}</h3>
+        {% if ps and ps.fixtures_generated %}
+            <a href="{% url 'ward_generate_fixtures' selected_phase.pk %}?sport_id={{ sport.id }}" class="btn-ghost">+ Regenerate Fixtures</a>
+        {% else %}
+            <a href="{% url 'ward_generate_fixtures' selected_phase.pk %}?sport_id={{ sport.id }}" class="btn-ghost">+ Generate Fixtures</a>
+        {% endif %}
+        {% if ps and ps.fixture_format in 'knockout,group_knockout' %}
+            <a href="{% url 'ward_next_round_builder' ps.pk %}" class="btn-ghost">Build Next Round</a>
+        {% endif %}
+    </div>
+
+    <div class="fixture-card-grid" style="margin-bottom:22px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+        {% with ps_fixtures=fixtures_by_sport|get_item:sport.id %}
+            {% for fixture in ps_fixtures %}
+            <div class="fixture-card" data-date="{% if fixture.kickoff_at %}{{ fixture.kickoff_at|date:'Y-m-d' }}{% else %}unscheduled{% endif %}" style="border: 1px solid var(--line, #cbd5e1); border-radius: 8px; padding: 16px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                    <span class="badge {% if fixture.status == 'live' %}live{% elif fixture.status == 'completed' %}success{% else %}pending{% endif %}" style="font-size:0.7rem;">
+                        {{ fixture.get_status_display }}
+                    </span>
+                    <span style="font-size: 0.75rem; color: #64748b;">
+                        R{{ fixture.round_number }}
+                        {% if fixture.kickoff_at %}&middot; {{ fixture.kickoff_at|time:"H:i" }}{% endif %}
+                        {% if fixture.venue %}&middot; {{ fixture.venue }}{% endif %}
+                    </span>
+                </div>
+                <div class="fixture-card-teams" style="margin: 12px 0;">
+                    <div style="display: flex; justify-content: space-between; font-weight: 500; font-size: 0.85rem; margin-bottom: 4px;">
+                        <span>{{ fixture.home_team.name }}</span>
+                        <strong>{% if fixture.result %}{{ fixture.result.home_score }}{% else %}?{% endif %}</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-weight: 500; font-size: 0.85rem;">
+                        <span>{{ fixture.away_team.name }}</span>
+                        <strong>{% if fixture.result %}{{ fixture.result.away_score }}{% else %}?{% endif %}</strong>
+                    </div>
+                </div>
+                <div class="fixture-card-actions">
+                    <a href="{% url 'ward_result_entry' fixture.pk %}" class="btn-ghost" style="flex:1; text-align:center; font-size:0.8rem; padding:6px;">
+                        {% if fixture.result %}Edit Result{% else %}Enter Result{% endif %}
+                    </a>
+                    <a href="{% url 'ward_edit_fixture' fixture.pk %}?from_phase={{ selected_phase.pk }}" class="icon-btn" title="Edit date, venue or details">
+                        <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state"><p>No local fixtures generated for {{ sport.name }} yet.</p></div>
+            {% endfor %}
+        {% endwith %}
+    </div>
+    {% endwith %}
+    {% endfor %}
+</div>
+
+            <!-- ============= TAB: RESULTS ============= -->
+            <div class="workspace-pane" id="pane-results" style="display:none;">
+                <div class="group-header-row">
+                    <h3 class="group-header">Verified & Submitted Results</h3>
+                </div>
+                <div class="group">
+                    {% for result in results %}
+                    <div class="group-row">
+                        <div class="row-left">
+                            <div>
+                                <div class="cell-main">{{ result.fixture.home_team.name }} {{ result.home_score }} - {{ result.away_score }} {{ result.fixture.away_team.name }}</div>
+                                <div class="cell-sub">{{ result.fixture.phase_sport.sport.name }} &middot; Entered {{ result.entered_at|date:"D, d M" }}</div>
+                            </div>
+                        </div>
+                        <div class="row-right">
+                            {% if result.verified %}
+                                <span class="badge success">Verified</span>
+                            {% else %}
+                                <span class="badge pending">Awaiting Verification</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                        <div class="empty-state"><p>No match results found for this phase yet.</p></div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        {% else %}
+            <!-- Fallback Empty State -->
+            <div class="empty-state" style="padding: 80px 20px;">
+                <svg viewBox="0 0 24 24" style="width: 48px; height: 48px; stroke: #94a3b8; stroke-width: 1.5; fill: none; margin-bottom: 16px;">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                </svg>
+                <h3 style="font-weight: 700; color: #334155;">No Active Ward Tournaments</h3>
+                <p style="color: #64748b; max-width: 400px; margin: 8px auto 0 auto;">
+                    Your ward hasn't been added to any active sports tournament phase. Contact the super administrator to enroll your ward.
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Handles toggling between Teams, Fixtures and Results workspaces
+    function switchTab(paneId, btnElement) {
+        document.querySelectorAll('#workspace-tab-bar .filter-pill').forEach(p => p.classList.remove('active'));
+        btnElement.classList.add('active');
+
+        document.querySelectorAll('.workspace-pane').forEach(p => p.style.display = 'none');
+
+        const target = document.getElementById(`pane-${paneId}`);
+        if (target) {
+            target.style.display = 'block';
+        }
+    }
+
+    // Handles interactive filtering of matches based on selected Date Pills
+    function setDateFilter(date, btnElement) {
+        document.querySelectorAll('#fixture-date-pills .filter-pill').forEach(p => p.classList.remove('active'));
+        btnElement.classList.add('active');
+
+        document.querySelectorAll('#pane-fixtures .fixture-card:not(.postponed)').forEach(card => {
+            if (date === 'all' || card.dataset.date === date) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+</script>
+{% endblock %}

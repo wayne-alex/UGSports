@@ -1,0 +1,71 @@
+{% if fixture_dates or has_unscheduled %}
+<div class="m-date-pills" id="m-date-pills-{{ tournament.pk }}">
+    <button type="button" class="m-pill{% if today not in fixture_dates %} active{% endif %}" data-date="all"
+            onclick="MatchFilter.set({{ tournament.pk }}, 'all', this)">All
+    </button>
+    {% for d in fixture_dates %}
+    <button type="button" class="m-pill{% if d == today %} active{% endif %}" data-date="{{ d|date:'Y-m-d' }}"
+            onclick="MatchFilter.set({{ tournament.pk }}, '{{ d|date:'Y-m-d' }}', this)">
+        {% if d == today %}
+        <span class="m-pill-date">Today</span>
+        {% else %}
+        <span class="m-pill-day">{{ d|date:"D" }}</span>
+        <span class="m-pill-date">{{ d|date:"d M" }}</span>
+        {% endif %}
+    </button>
+    {% endfor %}
+    {% if has_unscheduled %}
+    <button type="button" class="m-pill" data-date="unscheduled"
+            onclick="MatchFilter.set({{ tournament.pk }}, 'unscheduled', this)">TBC
+    </button>
+    {% endif %}
+</div>
+{% endif %}
+{% regroup fixtures by phase_sport as fixture_groups %}
+{% for group in fixture_groups %}
+{% if not limit_rows or forloop.counter <= limit_rows %}
+<div class="sports-card">
+    <div class="card-top-bar">
+        <span>{{ group.grouper.sport.name }}</span>
+    </div>
+    <div class="fixture-list">
+        {% for fixture in group.list %}
+        {% with fixture_date=fixture.kickoff_at|date:'Y-m-d' %}
+        <div class="fixture-click-row"
+             data-date="{% if fixture.kickoff_at %}{{ fixture_date }}{% else %}unscheduled{% endif %}"
+             {% if today in fixture_dates and fixture_date != today|date:'Y-m-d' %}style="display:none"{% endif %}
+             onclick="window.location.href='{% url 'fixture_detail' fixture.pk %}'">
+            <div class="fixture-click-meta">
+                {% if fixture.status == 'live' %}
+                <span class="live-indicator"><span class="live-dot"></span>Live</span>
+                {% elif fixture.kickoff_at %}
+                <span class="fixture-time">{{ fixture.kickoff_at|time:"H:i" }}</span>
+                {% else %}
+                <span class="fixture-time">TBC</span>
+                {% endif %}
+                {% if fixture.venue %}<span class="fixture-venue">{{ fixture.venue }}</span>{% endif %}
+                <svg class="fixture-chevron" viewBox="0 0 24 24">
+                    <polyline points="9 18 15 12 9 6"/>
+                </svg>
+            </div>
+            <div class="fixture-click-teams">
+                <div class="match-team-block">
+                    <div class="kit-badge">{{ fixture.home_team.name|slice:":2"|upper }}</div>
+                    <span class="team-lbl">{{ fixture.home_team.name }}</span></div>
+                <span class="score-tile mono">{% if fixture.result %}{{ fixture.result.home_score }}{% else %}?{% endif %}</span>
+            </div>
+            <div class="fixture-click-teams">
+                <div class="match-team-block">
+                    <div class="kit-badge">{{ fixture.away_team.name|slice:":2"|upper }}</div>
+                    <span class="team-lbl">{{ fixture.away_team.name }}</span></div>
+                <span class="score-tile mono">{% if fixture.result %}{{ fixture.result.away_score }}{% else %}?{% endif %}</span>
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% empty %}
+<div class="sports-card empty-state"><p>No fixtures scheduled yet for this phase.</p></div>
+{% endfor %}

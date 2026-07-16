@@ -1,0 +1,207 @@
+{% extends "superadmin_base.html" %}
+
+{% block title %}Tournament Desk — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}Operations{% endblock %}
+{% block page_title %}Tournament Desk{% endblock %}
+
+{% block header_actions %}
+<button type="button" class="btn-primary" onclick="toggleFormPanel('new-tournament-panel')">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    New Tournament
+</button>
+{% endblock %}
+
+{% block content %}
+
+<div class="inline-form-panel {% if open_form_panel %}active{% endif %}" id="new-tournament-panel">
+    <div class="form-panel-title">Create Tournament</div>
+    {% if form.non_field_errors %}
+    <div style="color:var(--rust); font-size:0.82rem; margin-bottom:12px;">{{ form.non_field_errors }}</div>
+{% endif %}
+<form method="post" action="{% url 'tournament_desk' %}">
+    {% csrf_token %}
+    <div class="form-grid-columns">
+        <div class="form-field-box">
+            <label>Name</label>{{ form.name }}
+            {{ form.name.errors }}
+        </div>
+        <div class="form-field-box">
+            <label>Season</label>{{ form.season }}
+            {{ form.season.errors }}
+        </div>
+        <div class="form-field-box">
+            <label>Status</label>{{ form.status }}
+            {{ form.status.errors }}
+        </div>
+        <div class="form-field-box">
+            <label>Sub County</label>{{ form.sub_county }}
+            {{ form.sub_county.errors }}
+        </div>
+        <div class="form-field-box">
+            <label>Ward</label>{{ form.ward }}
+            {{ form.ward.errors }}
+        </div>
+        <div class="form-field-box"><label>Start Date</label>{{ form.start_date }}{{ form.start_date.errors }}</div>
+        <div class="form-field-box"><label>End Date</label>{{ form.end_date }}{{ form.end_date.errors }}</div>
+    </div>
+
+    <p class="cell-sub" style="margin:-8px 0 16px;">
+        Leave Sub County and Ward blank for a countywide tournament.
+    </p>
+
+    <div class="form-field-box" style="margin-bottom:16px;">
+        <label>Sports</label>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:4px;">
+            {% for checkbox in form.sports %}
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:500;">
+                {{ checkbox.tag }} {{ checkbox.choice_label }}
+            </label>
+            {% endfor %}
+        </div>
+        {{ form.sports.errors }}
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="btn-ghost" onclick="toggleFormPanel('new-tournament-panel')">Cancel</button>
+        <button type="submit" class="btn-primary">Create Tournament</button>
+    </div>
+</form>
+
+{{ wards_json|json_script:"wards-data" }}
+</div>
+
+<div class="group-header-row">
+    <h3 class="group-header">All Tournaments</h3>
+    <span class="cell-sub">{{ tournaments|length }} tournament{{ tournaments|length|pluralize }}</span>
+</div>
+
+<div class="group">
+    {% for tournament in tournaments %}
+    <div class="group-row">
+        <div class="row-left">
+            <div class="avatar-chip">{{ tournament.season|slice:":2" }}</div>
+            <div>
+                <div class="cell-main">{{ tournament.name }}</div>
+                <div class="cell-sub">
+                    {{ tournament.season }} · {{ tournament.phase_count }} phase{{ tournament.phase_count|pluralize }}
+                    {% for sport in tournament.sports.all %} · {{ sport.name }}{% endfor %}
+                </div>
+            </div>
+        </div>
+        <div class="row-right">
+            {% if tournament.status == 'ongoing' %}
+                <span class="badge live"><span class="live-dot"></span>Live</span>
+            {% elif tournament.status == 'upcoming' %}
+                <span class="badge pending">Upcoming</span>
+            {% else %}
+                <span class="badge success">Completed</span>
+            {% endif %}
+            <a class="icon-btn" href="{% url 'tournament_edit' tournament.pk %}" title="Edit">
+                <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </a>
+            <form method="post" action="{% url 'tournament_delete' tournament.pk %}" style="display:inline;"
+                  onsubmit="return confirm('Delete {{ tournament.name }}? This removes ALL its phases, teams entries, fixtures and results. This cannot be undone.');">
+                {% csrf_token %}
+                <button type="submit" class="icon-btn danger" title="Delete">
+                    <svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+            </form>
+            <button class="icon-btn" title="View" onclick="window.location.href='{% url 'tournament_detail' tournament.pk %}'">
+                <svg viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <p>No tournaments yet. Create one, then add Ward, Sub-County and County phases underneath it.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+    const stageField = document.getElementById('id_stage');
+    const wardBox = document.getElementById('ward-field-box');
+    const subCountyBox = document.getElementById('subcounty-field-box');
+    const parentBox = document.getElementById('parent-field-box');
+
+    const subCountySelect = document.getElementById('id_sub_county');
+    const wardSelect = document.getElementById('id_ward');
+    const wardsDataEl = document.getElementById('wards-data');
+
+    if (subCountySelect && wardSelect && wardsDataEl) {
+        const allWards = JSON.parse(wardsDataEl.textContent);
+        const originalWardValue = wardSelect.value;
+
+        function refreshWards(preserveValue) {
+            const subCountyId = subCountySelect.value;
+            const currentValue = preserveValue ?? wardSelect.value;
+
+            wardSelect.innerHTML = '';
+
+            const blankOpt = document.createElement('option');
+            blankOpt.value = '';
+            blankOpt.textContent = '---------';
+            wardSelect.appendChild(blankOpt);
+
+            if (!subCountyId) {
+                // Countywide: no sub-county picked, so no ward makes sense either
+                wardSelect.disabled = true;
+                return;
+            }
+
+            wardSelect.disabled = false;
+            allWards
+                .filter(w => String(w.sub_county_id) === subCountyId)
+                .forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = w.id;
+                    opt.textContent = w.name;
+                    if (String(w.id) === String(currentValue)) opt.selected = true;
+                    wardSelect.appendChild(opt);
+                });
+        }
+
+        subCountySelect.addEventListener('change', () => refreshWards(null));
+        // preserve a validation-failed selection on initial load
+        refreshWards(originalWardValue);
+    }
+
+    function syncScopeFields() {
+        const stage = stageField.value;
+        wardBox.style.display = stage === 'ward' ? 'flex' : 'none';
+        subCountyBox.style.display = stage === 'sub_county' ? 'flex' : 'none';
+        // County/Final stage tournaments have no parent by convention
+        parentBox.style.display = (stage === 'county' || stage === 'final') ? 'none' : 'flex';
+    }
+
+    if (stageField) {
+        stageField.addEventListener('change', syncScopeFields);
+        syncScopeFields();
+    }
+});
+    function setStatusFilter(status, btnElement) {
+        document.querySelectorAll('#tournament-status-pills .filter-pill').forEach(p => p.classList.remove('active'));
+        btnElement.classList.add('active');
+        applyTournamentFilters();
+    }
+
+    function filterTournamentGroups() {
+        applyTournamentFilters();
+    }
+
+    function applyTournamentFilters() {
+        const query = document.getElementById('tournament-search-input').value.toLowerCase();
+        const activeStatus = document.querySelector('#tournament-status-pills .filter-pill.active').dataset.status;
+
+        document.querySelectorAll('.content-area > .group[data-search]').forEach(group => {
+            const matchesSearch = group.dataset.search.includes(query);
+            const matchesStatus = activeStatus === 'all' || group.dataset.status === activeStatus;
+            group.style.display = (matchesSearch && matchesStatus) ? 'block' : 'none';
+        });
+    }
+</script>
+{% endblock %}

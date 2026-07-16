@@ -1,0 +1,101 @@
+{% extends "subcounty/subcountyadmin_base.html" %}
+{% block title %}{{ tournament.name }} | {{ sub_county.name }}{% endblock %}
+{% block page_eyebrow %}{{ tournament.season }} Season{% endblock %}
+{% block page_title %}{{ tournament.name }}{% endblock %}
+
+{% block content %}
+
+<div class="group-header-row">
+    <h3 class="group-header">Sub-County &amp; Ward Phases</h3>
+    <a href="{% url 'subcounty_tournament' %}" class="btn-ghost">Back to List</a>
+</div>
+
+<!-- 1. The Sub-County Championship Phase -->
+<div class="group-header-row" style="margin-top:20px;">
+    <h3 class="group-header">Sub-County Level Playoff</h3>
+</div>
+<div class="group">
+    {% if sub_county_phase %}
+    <!-- Added onclick redirect to individual phase -->
+    <div class="group-row" onclick="window.location.href='{% url 'subcounty_phase_detail' sub_county_phase.id %}'" style="cursor:pointer;">
+        <div class="row-left">
+            <div class="avatar-chip mono">SC</div>
+            <div>
+                <div class="cell-main">{{ sub_county_phase.sub_county.name }} Championship Stage</div>
+                <div class="cell-sub">
+                    {% if sub_county_phase.start_date %}{{ sub_county_phase.start_date|date:"d M" }} - {{ sub_county_phase.end_date|date:"d M, Y" }}{% else %}Dates unconfigured{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- event.stopPropagation() keeps the status buttons working without triggering the row redirect -->
+        <div class="row-right" onclick="event.stopPropagation();" style="display: flex; align-items: center; gap: 12px;">
+            <form method="post" style="display: flex; gap: 6px; margin: 0;">
+                {% csrf_token %}
+                <input type="hidden" name="phase_id" value="{{ sub_county_phase.id }}">
+                <button type="submit" name="status" value="upcoming" class="btn-ghost {% if sub_county_phase.status == 'upcoming' %}active{% endif %}" style="padding: 4px 10px; font-size: 0.75rem;">Prep</button>
+                <button type="submit" name="status" value="ongoing" class="btn-ghost {% if sub_county_phase.status == 'ongoing' %}active{% endif %}" style="padding: 4px 10px; font-size: 0.75rem;">Live</button>
+                <button type="submit" name="status" value="completed" class="btn-ghost {% if sub_county_phase.status == 'completed' %}active{% endif %}" style="padding: 4px 10px; font-size: 0.75rem;">Done</button>
+            </form>
+
+            {% if sub_county_phase.status == 'ongoing' %}
+                <span class="badge live"><span class="live-dot"></span>Live</span>
+            {% elif sub_county_phase.status == 'upcoming' %}
+                <span class="badge pending">Upcoming</span>
+            {% else %}
+                <span class="badge success">Completed</span>
+            {% endif %}
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p>No sub-county play-off phase has been allocated to {{ sub_county.name }} for this tournament.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- 2. Individual Ward Qualifications -->
+<div class="group-header-row" style="margin-top:28px;">
+    <h3 class="group-header">Ward Qualifications</h3>
+</div>
+<div class="group">
+    {% for phase in ward_phases %}
+    <!-- Added onclick redirect to individual phase -->
+    <div class="group-row" onclick="window.location.href='{% url 'subcounty_phase_detail' phase.id %}'" style="cursor:pointer;">
+        <div class="row-left">
+            <div class="avatar-chip mono">{{ phase.ward.name|slice:":2"|upper }}</div>
+            <div>
+                <div class="cell-main">{{ phase.ward.name }} Ward Play-offs</div>
+                <div class="cell-sub">
+                    {% if phase.start_date %}{{ phase.start_date|date:"d M" }} - {{ phase.end_date|date:"d M" }}{% else %}Not scheduled{% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- event.stopPropagation() keeps the status buttons working without triggering the row redirect -->
+        <div class="row-right" onclick="event.stopPropagation();" style="display: flex; align-items: center; gap: 12px;">
+            <form method="post" style="display: flex; gap: 6px; margin: 0;">
+                {% csrf_token %}
+                <input type="hidden" name="phase_id" value="{{ phase.id }}">
+                <button type="submit" name="status" value="upcoming" class="btn-ghost {% if phase.status == 'upcoming' %}active{% endif %}" style="padding: 4px 10px; font-size: 0.75rem;">Prep</button>
+                <button type="submit" name="status" value="ongoing" class="btn-ghost {% if phase.status == 'ongoing' %}active{% endif %}" style="padding: 4px 10px; font-size: 0.75rem;">Live</button>
+                <button type="submit" name="status" value="completed" class="btn-ghost {% if phase.status == 'completed' %}active{% endif %}" style="padding: 4px 10px; font-size: 0.75rem;">Done</button>
+            </form>
+
+            {% if phase.status == 'ongoing' %}
+                <span class="badge live"><span class="live-dot"></span>Live</span>
+            {% elif phase.status == 'upcoming' %}
+                <span class="badge pending">Upcoming</span>
+            {% else %}
+                <span class="badge success">Completed</span>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <p>No ward phases have been mapped to your wards for this tournament.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

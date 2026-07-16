@@ -1,0 +1,66 @@
+{% extends "superadmin_base.html" %}
+{% block title %}Account Settings — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ request.user.get_role_display }}{% endblock %}
+{% block page_title %}Account Settings{% endblock %}
+
+{% block content %}
+
+<div class="group-header-row">
+    <h3 class="group-header">Profile</h3>
+</div>
+<div class="group" style="padding:24px; margin-bottom:24px;">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="profile">
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>First Name</label>
+                {{ profile_form.first_name }}
+            </div>
+            <div class="form-field-box">
+                <label>Last Name</label>
+                {{ profile_form.last_name }}
+            </div>
+            <div class="form-field-box">
+                <label>Email</label>
+                {{ profile_form.email }}
+                {% if profile_form.email.errors %}<div style="color:var(--rust); font-size:0.75rem;">{{ profile_form.email.errors }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Save Profile</button>
+        </div>
+    </form>
+</div>
+
+<div class="group-header-row">
+    <h3 class="group-header">Change Password</h3>
+</div>
+<div class="group" style="padding:24px;">
+    <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="password">
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Current Password</label>
+                {{ password_form.old_password }}
+                {% if password_form.old_password.errors %}<div style="color:var(--rust); font-size:0.75rem;">{{ password_form.old_password.errors }}</div>{% endif %}
+            </div>
+            <div class="form-field-box">
+                <label>New Password</label>
+                {{ password_form.new_password1 }}
+                {% if password_form.new_password1.errors %}<div style="color:var(--rust); font-size:0.75rem;">{{ password_form.new_password1.errors }}</div>{% endif %}
+            </div>
+            <div class="form-field-box">
+                <label>Confirm New Password</label>
+                {{ password_form.new_password2 }}
+                {% if password_form.new_password2.errors %}<div style="color:var(--rust); font-size:0.75rem;">{{ password_form.new_password2.errors }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">Change Password</button>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "ward/wardadmin_base.html" %}
+{% block title %}Dashboard — {{ ward.name }} Ward{% endblock %}
+{% block page_eyebrow %}{{ ward.name }} Ward{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <h3>Active Phases</h3>
+        <p>{{ active_phase_count }}<span>ongoing or upcoming</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Teams</h3>
+        <p>{{ team_count }}<span>registered in your ward</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Players</h3>
+        <p>{{ player_count }}<span>across all teams</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Pending Results</h3>
+        <p>{{ pending_results_count }}<span>awaiting verification</span></p>
+    </div>
+</div>
+
+<div class="group-header-row" style="margin-top:28px;">
+    <h3 class="group-header">Upcoming Fixtures</h3>
+    <a href="{% url 'ward_tournament' %}" class="btn-ghost">View All</a>
+</div>
+<div class="group">
+    {% for fixture in upcoming_fixtures %}
+    <div class="group-row">
+        <div class="row-left">
+            <div class="avatar-chip mono">R{{ fixture.round_number }}</div>
+            <div>
+                <div class="cell-main">{{ fixture.home_team.name }} vs {{ fixture.away_team.name }}</div>
+                <div class="cell-sub">
+                    {{ fixture.phase_sport.sport.name }}
+                    {% if fixture.kickoff_at %} &middot; {{ fixture.kickoff_at|date:"D, d M · H:i" }}{% else %} &middot; Not scheduled{% endif %}
+                </div>
+            </div>
+        </div>
+        <span class="badge pending">Scheduled</span>
+    </div>
+    {% empty %}
+    <div class="empty-state"><p>No upcoming fixtures for your ward right now.</p></div>
+    {% endfor %}
+</div>
+
+<div class="group-header-row" style="margin-top:28px;">
+    <h3 class="group-header">Your Ward's Phases</h3>
+</div>
+<div class="group">
+    {% for phase in ward_phases %}
+    <div class="group-row" onclick="window.location.href='{% url 'ward_tournament' %}'" style="cursor:pointer;">
+        <div class="row-left">
+            <div class="avatar-chip">{{ phase.tournament.crest_code }}</div>
+            <div>
+                <div class="cell-main">{{ phase.tournament.name }}</div>
+                <div class="cell-sub">{{ phase.tournament.season }} &middot; {{ phase.get_stage_display }}</div>
+            </div>
+        </div>
+        {% if phase.status == 'ongoing' %}
+            <span class="badge live"><span class="live-dot"></span>Live</span>
+        {% elif phase.status == 'upcoming' %}
+            <span class="badge pending">Upcoming</span>
+        {% else %}
+            <span class="badge success">Completed</span>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="empty-state"><p>Your ward hasn't been entered into a tournament phase yet.</p></div>
+    {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "subcounty/subcountyadmin_base.html" %}
+{% block title %}Add Team | {{ phase.ward.name }} Ward{% endblock %}
+{% block page_eyebrow %}{{ phase.ward.name }} Ward{% endblock %}
+{% block page_title %}Add New Team{% endblock %}
+{% block header_actions %}
+<a href="{% url 'subcounty_phase_detail' phase.pk %}" class="btn-ghost">Cancel</a>
+{% endblock %}
+{% block content %}
+<div class="group" style="padding:24px;">
+    {% if form.non_field_errors %}
+        <div style="color:var(--rust); font-size:0.82rem; margin-bottom:12px;">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <form method="post" enctype="multipart/form-data" id="team-form">
+        {% csrf_token %}
+        <div id="bulk-section" class="form-field-box" style="margin-bottom: 30px; border: 2px dashed #ccc; padding: 20px; border-radius: 8px;">
+            <label><strong>Bulk Upload (CSV)</strong></label>
+            <input type="file" name="csv_file" id="csv-input" accept=".csv">
+            <p style="font-size: 0.8rem; color: #666; margin-top: 5px;">
+                Columns: name, sport, ward, home_ground, coach_name, coach_phone. Uploading a file will ignore the individual form fields below. Ward must be one of {{ sub_county.name }}'s wards.
+            </p>
+        </div>
+        <div id="manual-section">
+            <h4 style="margin-bottom: 15px;">Or Register Individual Team</h4>
+            <div class="form-grid-columns">
+                <div class="form-field-box">
+                    <label>Team Name</label>{{ form.name }}
+                    {{ form.name.errors }}
+                </div>
+                <div class="form-field-box">
+                    <label>Sport</label>{{ form.sport }}
+                    {{ form.sport.errors }}
+                </div>
+                <div class="form-field-box">
+                    <label>Ward</label>{{ form.ward }}
+                    {{ form.ward.errors }}
+                </div>
+                <div class="form-field-box">
+                    <label>Home Ground</label>{{ form.home_ground }}
+                </div>
+                <div class="form-field-box">
+                    <label>Coach Name</label>{{ form.coach_name }}
+                </div>
+                <div class="form-field-box">
+                    <label>Coach Phone</label>{{ form.coach_phone }}
+                </div>
+            </div>
+        </div>
+        <div class="form-actions" style="margin-top: 20px;">
+            <button type="submit" class="btn-primary" id="submit-btn">Add Team(s)</button>
+        </div>
+    </form>
+</div>
+<script>
+    const fileInput = document.getElementById('csv-input');
+    const manualSection = document.getElementById('manual-section');
+    const requiredInputs = manualSection.querySelectorAll('input[required], select[required]');
+    fileInput.addEventListener('change', function() {
+        if (this.value) {
+            manualSection.style.display = 'none';
+            requiredInputs.forEach(input => input.removeAttribute('required'));
+        } else {
+            manualSection.style.display = 'block';
+            requiredInputs.forEach(input => input.setAttribute('required', 'required'));
+        }
+    });
+</script>
+{% endblock %}

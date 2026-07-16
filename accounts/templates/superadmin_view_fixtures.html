@@ -1,0 +1,21 @@
+{% block content %}
+<!-- Postponed Section -->
+{% if postponed_fixtures %}
+<div class="alert-box">
+    <h3>Postponed Matches</h3>
+    {% for f in postponed_fixtures %}...{% endfor %}
+</div>
+{% endif %}
+
+<!-- Date Filtered List -->
+{% regroup fixtures by kickoff_at|date:"d M Y" as fixture_list %}
+{% for date in fixture_list %}
+    <h2>{{ date.grouper }}</h2>
+    {% for fixture in date.list %}
+    <div class="group-row">
+        {{ fixture.home_team }} vs {{ fixture.away_team }}
+        <a href="{% url 'edit_fixture' fixture.pk %}">Reschedule/Edit</a>
+    </div>
+    {% endfor %}
+{% endfor %}
+{% endblock %}

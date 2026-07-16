@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <title>Governor's Cup — UG Sports</title>
+    <link href="https://fonts.googleapis.com" rel="preconnect">
+    <link crossorigin href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+          rel="stylesheet">
+    <style>
+        :root {
+            --pitch: #1B4332;
+            --pitch-dark: #0C2417;
+            --pitch-light: #2D5A45;
+            --ochre: #D98A3D;
+            --ochre-deep: #B36B23;
+            --rust: #C1440E;
+            --bg: #F8FAFC;
+            --card: #FFFFFF;
+            --ink: #0F172A;
+            --ink-soft: #64748B;
+            --ink-faint: #94A3B8;
+            --line: #E2E8F0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-variant-numeric: tabular-nums;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
+
+        .page {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        /* ===================== SCROLL PROGRESS ===================== */
+        .t-scroll-progress {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 2.5px;
+            width: 0%;
+            background: linear-gradient(90deg, var(--ochre), var(--ochre-deep));
+            z-index: 999;
+            transition: width 0.08s linear;
+        }
+
+        /* ===================== HERO (green throughout, scrolls away naturally) ===================== */
+        .t-hero {
+            position: relative;
+            padding: 20px 24px 28px;
+            text-align: center;
+            overflow: hidden;
+            background: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.055) 1px, transparent 1.6px),
+            linear-gradient(150deg, var(--pitch-light) 0%, var(--pitch) 45%, var(--pitch-dark) 100%);
+            background-size: 14px 14px, cover;
+            color: #fff;
+        }
+
+        .t-hero::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--ochre), transparent);
+        }
+
+        .t-back {
+            position: relative;
+            z-index: 3;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            cursor: pointer;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.82rem;
+            padding: 7px 14px 7px 8px;
+            border-radius: 99px;
+            transition: background 0.15s ease, transform 0.12s ease;
+            float: left;
+        }
+
+        .t-back:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .t-back:active {
+            transform: scale(0.96);
+        }
+
+        .t-back svg {
+            width: 17px;
+            height: 17px;
+            stroke: #fff;
+            stroke-width: 2.3;
+            fill: none;
+        }
+
+        .t-hero-inner {
+            position: relative;
+            z-index: 1;
+            padding-top: 6px;
+            opacity: 0;
+            animation: heroRise 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.05s forwards;
+        }
+
+        @keyframes heroRise {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .t-crest-wrap {
+            position: relative;
+            width: 84px;
+            height: 84px;
+            margin: 0 auto;
+        }
+
+        .t-crest {
+            position: relative;
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(6px);
+            border: 2px solid rgba(217, 138, 61, 0.6);
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25), inset 0 1px 2px rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .t-crest-code {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 800;
+            font-size: 1.7rem;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+
+        .t-crest-year {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1rem;
+            color: transparent;
+            -webkit-text-stroke: 1px var(--ochre);
+            letter-spacing: 1.5px;
+            margin-top: 2px;
+        }
+
+        /* Plain text tournament name with a one-time shine sweep */
+        .t-name {
+            margin-top: 18px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: -0.3px;
+            background: linear-gradient(100deg, #fff 30%, #fff 45%, #ffe9cf 50%, #fff 55%, #fff 70%);
+            background-size: 250% 100%;
+            background-position: 100% 0;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            animation: nameShine 1.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s forwards;
+        }
+
+        @keyframes nameShine {
+            to {
+                background-position: 0% 0;
+            }
+        }
+
+        .t-live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #FF6B4A;
+            animation: pulse 1.4s infinite;
+        }
+
+        .t-caption {
+            margin-top: 18px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.65);
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+        }
+
+        .t-caption .divider {
+            color: rgba(255, 255, 255, 0.3);
+            margin: 0 7px;
+            font-weight: 400;
+        }
+
+        .t-stage-mini {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 14px;
+        }
+
+        .t-stage-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+
+        .t-stage-dot.done {
+            background: var(--ochre);
+        }
+
+        .t-stage-dot.active {
+            background: #fff;
+            width: 7px;
+            height: 7px;
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+        }
+
+        .t-stage-connector {
+            width: 14px;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* ===================== STICKY BAR (green compact bar + light nav) ===================== */
+        .t-sticky {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .t-compact-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 20px;
+            height: 0;
+            opacity: 0;
+            overflow: hidden;
+            background: linear-gradient(120deg, var(--pitch) 0%, var(--pitch-dark) 100%);
+            transition: height 0.32s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.22s ease;
+        }
+
+        .t-compact-bar.visible {
+            height: 54px;
+            opacity: 1;
+        }
+
+        .t-compact-bar .t-back {
+            float: none;
+            padding: 5px 11px 5px 6px;
+            font-size: 0.78rem;
+        }
+
+        .t-compact-name {
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .t-compact-live {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #FFD9C7;
+        }
+
+        .t-nav-scroll {
+            position: relative;
+            display: flex;
+            gap: 2px;
+            overflow-x: auto;
+            padding: 4px 20px 0;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+            background: rgba(248, 250, 252, 0.94);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .t-nav-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .t-nav-item {
+            position: relative;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 11px 15px;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: var(--ink-soft);
+            background: none;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: color 0.15s ease, transform 0.12s ease;
+        }
+
+        .t-nav-item.active {
+            color: var(--pitch);
+        }
+
+        .t-nav-item:hover:not(.active) {
+            color: var(--ink);
+        }
+
+        .t-nav-item:active {
+            transform: scale(0.95);
+        }
+
+        .t-nav-badge {
+            background: var(--rust);
+            color: #fff;
+            font-size: 0.58rem;
+            font-weight: 700;
+            min-width: 15px;
+            height: 15px;
+            border-radius: 99px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .t-nav-indicator {
+            position: absolute;
+            bottom: 0;
+            height: 2.5px;
+            background: var(--ochre);
+            border-radius: 3px 3px 0 0;
+            transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), width 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* ===================== BODY ===================== */
+        .t-body {
+            padding: 22px 20px 60px;
+        }
+
+        .t-tab-pane {
+            display: none;
+        }
+
+        .t-tab-pane.active {
+            display: block;
+            animation: paneIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes paneIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .t-section-heading {
+            font-size: 0.96rem;
+            font-weight: 700;
+            letter-spacing: -0.1px;
+            margin: 26px 0 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .t-section-heading:first-child {
+            margin-top: 0;
+        }
+
+        .t-section-heading .sub {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: var(--pitch);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+        }
+
+        .t-section-heading .sub:hover {
+            color: var(--ochre-deep);
+        }
+
+        .t-stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .t-stat-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+
+        .t-stat-card .num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--pitch);
+        }
+
+        .t-stat-card .lbl {
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--ink-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 3px;
+        }
+
+        .sports-card {
+            background: var(--card);
+            border-radius: 16px;
+            border: 1px solid var(--line);
+            margin-bottom: 14px;
+            box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+            overflow: hidden;
+        }
+
+        .card-top-bar {
+            background: #FAFBFC;
+            padding: 11px 18px;
+            font-size: 0.66rem;
+            font-weight: 700;
+            color: var(--pitch);
+            display: flex;
+            justify-content: space-between;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .league-table-header {
+            display: flex;
+            padding: 9px 18px;
+            background: #FAFBFC;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: var(--ink-soft);
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .col-team {
+            flex: 1;
+        }
+
+        .col-data {
+            width: 38px;
+            text-align: center;
+        }
+
+        .league-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .league-row:last-child {
+            border-bottom: none;
+        }
+
+        .team-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .team-pos {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--ink-soft);
+            width: 14px;
+        }
+
+        .kit-badge {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: var(--pitch);
+            background: #F1F5F9;
+            border: 1px solid var(--line);
+            flex-shrink: 0;
+        }
+
+        .team-lbl {
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .cell-data {
+            width: 38px;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.78rem;
+            color: var(--ink);
+        }
+
+        .cell-data.bold {
+            font-weight: 700;
+            color: var(--pitch);
+        }
+
+        .match-row {
+            padding: 8px 18px 18px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .match-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 11px 0;
+        }
+
+        .match-line + .match-line {
+            border-top: 1px dashed var(--line);
+        }
+
+        .match-team-block {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+        }
+
+        .score-tile {
+            min-width: 30px;
+            text-align: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #fff;
+            background: var(--pitch-dark);
+            border-radius: 8px;
+            padding: 4px 9px;
+        }
+
+        .live-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #FEF2F2;
+            color: var(--rust);
+            padding: 3px 11px;
+            border-radius: 99px;
+            font-size: 0.58rem;
+            font-weight: 700;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--rust);
+            animation: pulse 1.4s infinite;
+        }
+
+        .kickoff-badge {
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--ink-soft);
+        }
+
+        .news-card-inner {
+            padding: 20px;
+        }
+
+        .news-tag {
+            display: inline-block;
+            font-size: 0.58rem;
+            font-weight: 700;
+            color: var(--pitch);
+            background: #E9EEF1;
+            padding: 4px 11px;
+            border-radius: 99px;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .news-card-inner h3 {
+            font-size: 0.98rem;
+            font-weight: 700;
+            line-height: 1.4;
+            margin-bottom: 8px;
+        }
+
+        .news-card-inner p {
+            font-size: 0.82rem;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        .news-meta {
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px solid var(--line);
+            font-size: 0.66rem;
+            color: var(--ink-soft);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .scorer-row {
+            display: flex;
+            align-items: center;
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--line);
+            gap: 12px;
+        }
+
+        .scorer-row:last-child {
+            border-bottom: none;
+        }
+
+        .scorer-rank {
+            width: 18px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.72rem;
+            color: var(--ink-soft);
+            font-weight: 700;
+        }
+
+        .scorer-name {
+            font-size: 0.83rem;
+            font-weight: 600;
+        }
+
+        .scorer-team {
+            font-size: 0.72rem;
+            color: var(--ink-soft);
+        }
+
+        .scorer-goals {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--pitch);
+            width: 30px;
+            text-align: right;
+        }
+
+        .team-stat-row {
+            display: flex;
+            align-items: center;
+            padding: 13px 18px;
+            border-bottom: 1px solid var(--line);
+            gap: 13px;
+        }
+
+        .team-stat-row:last-child {
+            border-bottom: none;
+        }
+
+        .team-stat-meta {
+            flex: 1;
+        }
+
+        .team-stat-meta .name {
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .team-stat-meta .ward {
+            font-size: 0.72rem;
+            color: var(--ink-soft);
+        }
+
+        .team-stat-figs {
+            display: flex;
+            gap: 16px;
+        }
+
+        .team-stat-fig {
+            text-align: center;
+        }
+
+        .team-stat-fig .v {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+
+        .team-stat-fig .k {
+            font-size: 0.58rem;
+            color: var(--ink-soft);
+            text-transform: uppercase;
+        }
+
+        .empty-state {
+            padding: 46px 22px;
+            text-align: center;
+        }
+
+        .empty-state .icon {
+            width: 48px;
+            height: 48px;
+            margin: 0 auto 14px;
+            border-radius: 50%;
+            background: #F1F5F9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-state .icon svg {
+            width: 22px;
+            height: 22px;
+            stroke: var(--ochre-deep);
+            fill: none;
+        }
+
+        .empty-state p {
+            font-size: 0.82rem;
+            color: var(--ink-soft);
+            max-width: 280px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.4;
+            }
+        }
+
+        .t-btn-outline {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 12px;
+            border-radius: 12px;
+            border: none;
+            background: #F1F5F9;
+            color: var(--pitch);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.1px;
+            cursor: pointer;
+            margin-bottom: 28px;
+            transition: background 0.18s ease, color 0.18s ease, transform 0.12s ease;
+        }
+
+        .t-btn-outline svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            stroke-width: 2.4;
+            fill: none;
+            transition: transform 0.18s ease;
+        }
+
+        .t-btn-outline:hover {
+            background: var(--pitch);
+            color: #fff;
+        }
+
+        .t-btn-outline:hover svg {
+            transform: translateX(3px);
+        }
+
+        .t-btn-outline:active {
+            transform: scale(0.98);
+        }
+
+        .t-btn-outline:last-child {
+            margin-bottom: 0;
+        }
+
+        .m-date-pills {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+            margin-bottom: 16px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .m-date-pills::-webkit-scrollbar {
+            display: none;
+        }
+
+        .m-pill {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1px;
+            padding: 8px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: var(--card);
+            color: var(--ink-soft);
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.12s ease;
+        }
+
+        .m-pill:active {
+            transform: scale(0.96);
+        }
+
+        .m-pill.active {
+            background: var(--pitch);
+            border-color: var(--pitch);
+            color: #fff;
+        }
+
+        .m-pill-day {
+            font-size: 0.62rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            opacity: 0.75;
+        }
+
+        .m-pill-date {
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .m-pill:not(.m-pill-day):not(.m-pill-date) {
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .fixture-list {
+            padding: 4px 0;
+        }
+
+        .fixture-click-row {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--line);
+            cursor: pointer;
+            transition: background 0.15s ease;
+        }
+
+        .fixture-click-row:last-child {
+            border-bottom: none;
+        }
+
+        .fixture-click-row:hover {
+            background: #FAFBFC;
+        }
+
+        .fixture-click-row:active {
+            background: #F1F5F9;
+        }
+
+        .fixture-click-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .fixture-time {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--ink-soft);
+        }
+
+        .fixture-venue {
+            font-size: 0.72rem;
+            color: var(--ink-faint);
+        }
+
+        .fixture-venue::before {
+            content: "·";
+            margin-right: 8px;
+            color: var(--ink-faint);
+        }
+
+        .fixture-chevron {
+            width: 14px;
+            height: 14px;
+            stroke: var(--ink-faint);
+            stroke-width: 2.3;
+            fill: none;
+            margin-left: auto;
+        }
+
+        .fixture-click-teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="t-scroll-progress" id="t-scroll-progress"></div>
+
+<div class="page">
+
+    <div class="t-hero" id="t-hero-{{ tournament.pk }}">
+        <button aria-label="Back to lobby" class="t-back" onclick="window.location.href='{% url 'client_lobby' %}'">
+            <svg viewBox="0 0 24 24">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+            Lobby
+        </button>
+        <div class="t-hero-inner">
+            <div class="t-crest-wrap">
+                <div class="t-crest">
+                    <span class="t-crest-code">{{ tournament.crest_code }}</span>
+                    <span class="t-crest-year">{{ tournament.crest_year }}</span>
+                </div>
+            </div>
+            <h1 class="t-name">{{ tournament.name }}</h1>
+            <div class="t-caption">{{ tournament.season }} Season <span class="divider">&middot;</span> {{ selected_phase.get_stage_display|default:"No phase selected" }}
+            </div>
+            <div class="t-stage-mini">
+                {% for stage in stage_progress %}
+                <div class="t-stage-dot {{ stage.status }}"></div>
+                {% if not forloop.last %}
+                <div class="t-stage-connector"></div>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="t-sticky">
+        <div class="t-compact-bar" id="t-compact-{{ tournament.pk }}">
+            <button aria-label="Back to lobby" class="t-back" onclick="window.location.href='{% url 'client_lobby' %}'">
+                <svg viewBox="0 0 24 24">
+                    <polyline points="15 18 9 12 15 6"/>
+                </svg>
+            </button>
+            <span class="t-compact-name">{{ tournament.name }}</span>
+            {% if live_count %}
+            <span class="t-compact-live"><span class="t-live-dot"></span>{{ live_count }} live</span>
+            {% endif %}
+        </div>
+        <nav class="t-nav-scroll" id="t-nav-{{ tournament.pk }}">
+            <div class="t-nav-indicator" id="t-nav-indicator-{{ tournament.pk }}"></div>
+            <button class="t-nav-item active" data-tab="overview">Overview</button>
+<button class="t-nav-item" data-tab="matches">Matches{% if today_count %} <span class="t-nav-badge">{{ today_count }}</span>{% endif %}</button>            <button class="t-nav-item" data-tab="tables">Standings</button>
+            <button class="t-nav-item" data-tab="draw">Draw</button>
+            <button class="t-nav-item" data-tab="news">News</button>
+            <button class="t-nav-item" data-tab="player-stats">Player stats</button>
+            <button class="t-nav-item" data-tab="team-stats">Team stats</button>
+        </nav>
+    </div>
+    {% include "partials/_phase_selector.html" %}
+
+
+    <div class="t-body">
+        <div class="t-tab-pane active" id="t-pane-overview-{{ tournament.pk }}">
+            {% include "tabs/_overview.html" %}
+        </div>
+        <div class="t-tab-pane" id="t-pane-matches-{{ tournament.pk }}">
+            {% include "tabs/_matches.html" %}
+        </div>
+        <div class="t-tab-pane" id="t-pane-tables-{{ tournament.pk }}">
+            {% include "tabs/_tables.html" %}
+        </div>
+        <div class="t-tab-pane" id="t-pane-draw-{{ tournament.pk }}">
+            {% include "tabs/_draw.html" %}
+        </div>
+        <div class="t-tab-pane" id="t-pane-news-{{ tournament.pk }}">
+            {% include "tabs/_news.html" %}
+        </div>
+        <div class="t-tab-pane" id="t-pane-player-stats-{{ tournament.pk }}">
+            {% include "tabs/_player_stats.html" %}
+        </div>
+        <div class="t-tab-pane" id="t-pane-team-stats-{{ tournament.pk }}">
+            {% include "tabs/_team_stats.html" %}
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ============================================================
+       SHELL — section navigation, history, polling orchestration
+       ============================================================ */
+    const Shell = {
+        stack: [],
+        pollers: {},
+
+        goto(id, url, pushUrl) {
+            const existing = document.getElementById('section-' + id);
+            if (existing) {
+                this._show(id);
+            } else if (url) {
+                this._load(id, url);
+            } else {
+                this._loadStatic(id);
+            }
+            this.stack.push(id);
+            const backBtn = document.getElementById('shell-back-btn');
+            if (backBtn) backBtn.classList.toggle('visible', this.stack.length > 1);
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.nav === id));
+            if (pushUrl !== false) history.pushState({sectionId: id, url}, '', url || location.pathname);
+        },
+
+        refresh(id, url) {
+            if (this.pollers[id]) {
+                Object.values(this.pollers[id]).forEach(p => {
+                    if (p.timer) clearInterval(p.timer);
+                });
+                delete this.pollers[id];
+            }
+            const el = document.getElementById('section-' + id);
+            if (!el) return;
+            el.innerHTML = '<div class="section-loading"><div class="spinner"></div>Loading…</div>';
+            fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}}).then(r => r.text()).then(html => {
+                el.innerHTML = html;
+                this._runScoped(el);
+                this._syncPollers(id);
+            });
+        },
+
+        back() {
+            if (this.stack.length > 1) {
+                this.stack.pop();
+                const prev = this.stack[this.stack.length - 1];
+                this._show(prev);
+                this.stack.pop();
+                this.goto(prev, null, false);
+            }
+        },
+
+        _show(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            const el = document.getElementById('section-' + id);
+            if (el) el.classList.add('active');
+            this._syncPollers(id);
+        },
+
+        async _load(id, url) {
+            const container = document.getElementById('app-sections');
+            const placeholder = document.createElement('div');
+            placeholder.className = 'section active';
+            placeholder.id = 'section-' + id;
+            placeholder.innerHTML = '<div class="section-loading"><div class="spinner"></div>Loading…</div>';
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            container.appendChild(placeholder);
+
+            const res = await fetch(url, {headers: {'X-Requested-With': 'XMLHttpRequest'}});
+            placeholder.innerHTML = await res.text();
+            this._runScoped(placeholder);
+            this._syncPollers(id);
+        },
+
+        _loadStatic(id) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            const el = document.getElementById('section-' + id);
+            if (el) el.classList.add('active');
+        },
+
+        _runScoped(container) {
+            container.querySelectorAll('script').forEach(old => {
+                const s = document.createElement('script');
+                s.textContent = old.textContent;
+                old.replaceWith(s);
+            });
+        },
+
+        /* Polling: each section registers {url, targetId, intervalMs} keyed by name.
+           The key (e.g. 'standings', 'fixtures', 'news') maps directly to a
+           PollRenderers[key] function that turns the JSON response into DOM. */
+        registerPoll(sectionId, key, url, targetId, intervalMs) {
+            this.pollers[sectionId] = this.pollers[sectionId] || {};
+            this.pollers[sectionId][key] = {url, targetId, intervalMs, timer: null};
+        },
+
+        _syncPollers(activeId) {
+            Object.entries(this.pollers).forEach(([sectionId, entries]) => {
+                Object.entries(entries).forEach(([key, p]) => {
+                    if (sectionId === activeId && !p.timer) {
+                        const tick = async () => {
+                            try {
+                                const res = await fetch(p.url);
+                                if (!res.ok) return;
+                                const data = await res.json();
+                                if (window.PollRenderers && window.PollRenderers[key]) {
+                                    window.PollRenderers[key](p.targetId, data);
+                                }
+                            } catch (e) { /* silent — next tick retries */
+                            }
+                        };
+                        tick();
+                        p.timer = setInterval(tick, p.intervalMs);
+                    } else if (sectionId !== activeId && p.timer) {
+                        clearInterval(p.timer);
+                        p.timer = null;
+                    }
+                });
+            });
+        }
+    };
+
+    window.addEventListener('popstate', (e) => {
+        if (e.state && e.state.sectionId) Shell.goto(e.state.sectionId, e.state.url, false);
+    });
+
+    /* ============================================================
+       POLL RENDERERS — JSON -> DOM for each polled section
+       ============================================================ */
+    window.PollRenderers = window.PollRenderers || {};
+
+    PollRenderers._preserveStyle = function (el, newHtml) {
+        const existingStyle = el.querySelector(':scope > style');
+        return existingStyle ? existingStyle.outerHTML + newHtml : newHtml;
+    };
+
+    PollRenderers._esc = function (s) {
+        const d = document.createElement('div');
+        d.textContent = s == null ? '' : String(s);
+        return d.innerHTML;
+    };
+
+    PollRenderers.standings = function (targetId, data) {
+        const el = document.getElementById(targetId);
+        if (!el) return;
+
+        const rowHtml = (row, idx, qualifies) => `
+            <div class="league-row ${qualifies ? 'qualifies' : ''}">
+                <div class="team-meta">
+                    <span class="team-pos">${idx}</span>
+                    <div class="kit-badge">${PollRenderers._esc(row.team_name.slice(0, 2).toUpperCase())}</div>
+                    <span class="team-lbl">${PollRenderers._esc(row.team_name)}</span>
+                </div>
+                <div class="cell-data">${row.played}</div>
+                <div class="cell-data">${row.goal_difference}</div>
+                <div class="cell-data bold">${row.points}</div>
+            </div>`;
+
+        const cards = data.phase_sports.map(ps => {
+            let body = '';
+            if (ps.fixture_format === 'group_knockout') {
+                body += ps.groups.map(g => `
+                    <div class="group-block">
+                        <div class="league-table-header">
+                            <div class="col-team"><span class="group-badge">GROUP ${PollRenderers._esc(g.name)}</span></div>
+                            <div class="col-data">P</div><div class="col-data">GD</div><div class="col-data col-wide">PTS</div>
+                        </div>
+                        ${g.standings.map((r, i) => rowHtml(r, i + 1, i < 2)).join('') || '<div class="empty-state"><p>No standings yet.</p></div>'}
+                        <div class="qualify-note"><span class="dot"></span> Top 2 advance to the knockout stage</div>
+                    </div>`).join('') || '<div class="empty-state"><p>Groups haven\'t been drawn yet.</p></div>';
+                body += `<div class="draw-redirect" data-jump="draw">
+                    <p>Knockout bracket for this sport is on the Draw tab.</p>
+                    <span class="link">Go to Draw</span>
+                </div>`;
+            } else if (ps.fixture_format === 'knockout') {
+                body = `<div class="draw-redirect" data-jump="draw">
+                    <p>${PollRenderers._esc(ps.sport_name)} runs as a knockout — see the bracket on the Draw tab.</p>
+                    <span class="link">Go to Draw</span>
+                </div>`;
+            } else {
+                body = `
+                    <div class="league-table-header">
+                        <div class="col-team">Team</div><div class="col-data">P</div><div class="col-data">GD</div><div class="col-data col-wide">PTS</div>
+                    </div>
+                    ${ps.standings.map((r, i) => rowHtml(r, i + 1, false)).join('') || '<div class="empty-state"><p>No standings available yet.</p></div>'}`;
+            }
+            return `<div class="sports-card"><div class="card-top-bar"><span>${PollRenderers._esc(ps.sport_name)}</span></div>${body}</div>`;
+        }).join('');
+
+        el.innerHTML = PollRenderers._preserveStyle(el, cards || '<div class="sports-card empty-state"><p>No sports have been added to this phase yet.</p></div>');
+        PollRenderers._rebindJump(el);
+    };
+
+    PollRenderers.fixtures = function (targetId, data) {
+    const el = document.getElementById(targetId);
+    if (!el) return;
+
+    const existingPills = el.querySelector('.m-date-pills');
+    const prevActive = existingPills ? existingPills.querySelector('.m-pill.active') : null;
+    const prevDate = prevActive ? prevActive.dataset.date : 'all';
+    const pk = existingPills ? existingPills.id.replace('m-date-pills-', '') : '';
+
+    let pillsHtml = '';
+    if (data.dates.length || data.has_unscheduled) {
+        pillsHtml = `<div class="m-date-pills" id="m-date-pills-${pk}">`;
+        pillsHtml += `<button type="button" class="m-pill ${prevDate === 'all' ? 'active' : ''}" data-date="all" onclick="MatchFilter.set(${pk}, 'all', this)">All</button>`;
+        data.dates.forEach(d => {
+            pillsHtml += `<button type="button" class="m-pill ${prevDate === d.iso ? 'active' : ''}" data-date="${d.iso}" onclick="MatchFilter.set(${pk}, '${d.iso}', this)">
+                <span class="m-pill-day">${d.day}</span><span class="m-pill-date">${d.label}</span>
+            </button>`;
+        });
+        if (data.has_unscheduled) {
+            pillsHtml += `<button type="button" class="m-pill ${prevDate === 'unscheduled' ? 'active' : ''}" data-date="unscheduled" onclick="MatchFilter.set(${pk}, 'unscheduled', this)">TBC</button>`;
+        }
+        pillsHtml += `</div>`;
+    }
+
+    const activeDate = prevDate;
+
+    const groups = {};
+    data.fixtures.forEach(f => {
+        if (!groups[f.sport_name]) groups[f.sport_name] = [];
+        groups[f.sport_name].push(f);
+    });
+
+    const rowHtml = (f) => `
+        <div class="fixture-click-row" data-date="${f.date}" style="display:${activeDate === 'all' || activeDate === f.date ? '' : 'none'}" onclick="window.location.href='/fixture/${f.id}/details/'">
+            <div class="fixture-click-meta">
+                ${f.status === 'live'
+                    ? '<span class="live-indicator"><span class="live-dot"></span>Live</span>'
+                    : `<span class="fixture-time">${PollRenderers._esc(f.time || 'TBC')}</span>`}
+                ${f.venue ? `<span class="fixture-venue">${PollRenderers._esc(f.venue)}</span>` : ''}
+                <svg class="fixture-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>
+            <div class="fixture-click-teams">
+                <div class="match-team-block"><div class="kit-badge">${PollRenderers._esc(f.home_team.slice(0, 2).toUpperCase())}</div><span class="team-lbl">${PollRenderers._esc(f.home_team)}</span></div>
+                <span class="score-tile mono">${f.home_score !== null ? f.home_score : '–'}</span>
+            </div>
+            <div class="fixture-click-teams">
+                <div class="match-team-block"><div class="kit-badge">${PollRenderers._esc(f.away_team.slice(0, 2).toUpperCase())}</div><span class="team-lbl">${PollRenderers._esc(f.away_team)}</span></div>
+                <span class="score-tile mono">${f.away_score !== null ? f.away_score : '–'}</span>
+            </div>
+        </div>`;
+
+    const cards = Object.entries(groups).map(([sportName, fixtures]) => `
+        <div class="sports-card">
+            <div class="card-top-bar"><span>${PollRenderers._esc(sportName)}</span></div>
+            <div class="fixture-list">${fixtures.map(rowHtml).join('')}</div>
+        </div>`).join('');
+
+    const bodyHtml = pillsHtml + (cards || '<div class="sports-card empty-state"><p>No fixtures scheduled yet for this phase.</p></div>');
+
+    el.innerHTML = PollRenderers._preserveStyle(el, bodyHtml);
+};
+
+    PollRenderers.news = function (targetId, data) {
+        const el = document.getElementById(targetId);
+        if (!el) return;
+
+        // Guard: skip refresh if the user is actively typing a comment anywhere on this tab
+        const isTyping = [...el.querySelectorAll('.comment-input')].some(
+            inp => inp === document.activeElement || inp.value.trim().length > 0
+        );
+        if (isTyping) return;
+
+        const esc = PollRenderers._esc;
+
+        const newsHtml = data.news_posts.map(post => `
+        <div class="sports-card news-card-inner" data-post-id="${post.id}">
+            <span class="news-tag">${esc(post.tag_display)}</span>
+            <h3>${esc(post.title)}</h3>
+            <p>${esc(post.body_preview)}</p>
+            <div class="news-meta">
+                <span>${esc(post.author)} &middot; ${esc(post.scope)}</span>
+                <span>${esc(post.published_ago)}</span>
+            </div>
+            <div class="news-actions">
+                <button class="news-action-btn like-btn" onclick="NewsBoard.toggleLike(this, ${post.id})">
+                    <svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+                    <span class="like-count">${post.like_count}</span>
+                </button>
+                <button class="news-action-btn" onclick="NewsBoard.toggleComments(this, ${post.id})">
+                    <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                    <span>${post.comments.length} comment${post.comments.length !== 1 ? 's' : ''}</span>
+                </button>
+            </div>
+            <div class="comment-section" id="comments-${post.id}">
+                <div class="comment-list" id="comment-list-${post.id}">
+                    ${post.comments.length ? post.comments.map(c => `
+                        <div class="comment-row">
+                            <div class="comment-avatar">${esc(c.author.slice(0, 2).toUpperCase())}</div>
+                            <div class="comment-body">
+                                <div class="comment-meta"><span class="comment-author">${esc(c.author)}</span><span class="comment-time">${esc(c.created_ago)}</span></div>
+                                <div class="comment-text">${esc(c.content)}</div>
+                            </div>
+                        </div>`).join('') : '<p class="comment-empty">No comments yet — be the first.</p>'}
+                </div>
+                <div class="comment-form">
+                    <textarea class="comment-input" rows="1" placeholder="Add a comment..." id="comment-input-${post.id}"></textarea>
+                    <button class="comment-submit" onclick="NewsBoard.submitComment(${post.id})">Post</button>
+                </div>
+            </div>
+        </div>`).join('') || '<div class="sports-card empty-state"><p>No news posted for this scope yet.</p></div>';
+
+        el.innerHTML = PollRenderers._preserveStyle(el, newsHtml);
+    };
+
+
+    PollRenderers._rebindJump = function (container) {
+        const nav = document.querySelector('.t-nav-scroll');
+        container.querySelectorAll('[data-jump]').forEach(el => {
+            el.addEventListener('click', () => {
+                const btn = nav && nav.querySelector('.t-nav-item[data-tab="' + el.dataset.jump + '"]');
+                if (btn) btn.click();
+            });
+        });
+    };
+
+    /* ============================================================
+       PER-TOURNAMENT UI: tabs, filters, hero scroll, counters, polling
+       ============================================================ */
+    (function () {
+        const pk = {{ tournament.pk }};
+
+        const nav = document.getElementById('t-nav-' + pk);
+        const indicator = document.getElementById('t-nav-indicator-' + pk);
+
+        function moveIndicator(el) {
+            indicator.style.width = el.offsetWidth + 'px';
+            indicator.style.transform = 'translateX(' + el.offsetLeft + 'px)';
+        }
+
+        window.MatchFilter = window.MatchFilter || {
+            set(pk, dateVal, btnEl) {
+                document.querySelectorAll('#m-date-pills-' + pk + ' .m-pill').forEach(p => p.classList.remove('active'));
+                btnEl.classList.add('active');
+                document.querySelectorAll('#t-pane-matches-' + pk + ' .fixture-click-row').forEach(row => {
+                    row.style.display = (dateVal === 'all' || row.dataset.date === dateVal) ? '' : 'none';
+                });
+            }
+        };
+
+        function activateTab(name, el) {
+            nav.querySelectorAll('.t-nav-item').forEach(t => t.classList.remove('active'));
+            el.classList.add('active');
+            moveIndicator(el);
+            el.scrollIntoView({behavior: 'smooth', inline: 'center', block: 'nearest'});
+            document.querySelectorAll(
+                '#t-pane-overview-' + pk + ', #t-pane-matches-' + pk + ', #t-pane-tables-' + pk +
+                ', #t-pane-draw-' + pk + ', #t-pane-news-' + pk + ', #t-pane-player-stats-' + pk + ', #t-pane-team-stats-' + pk
+            ).forEach(p => p.classList.remove('active'));
+            document.getElementById('t-pane-' + name + '-' + pk).classList.add('active');
+            Shell._syncPollers('tournament-' + pk);
+        }
+
+        nav.querySelectorAll('.t-nav-item').forEach(btn => {
+            btn.addEventListener('click', () => activateTab(btn.dataset.tab, btn));
+        });
+        document.querySelectorAll('#t-pane-overview-' + pk + ' [data-jump]').forEach(el => {
+            el.addEventListener('click', () => {
+                const btn = nav.querySelector('.t-nav-item[data-tab="' + el.dataset.jump + '"]');
+                if (btn) activateTab(el.dataset.jump, btn);
+            });
+        });
+
+        moveIndicator(nav.querySelector('.t-nav-item.active'));
+
+        document.querySelectorAll('#t-pane-overview-' + pk + ' .t-stat-card .num[data-count]').forEach(el => {
+            const target = parseInt(el.dataset.count, 10);
+            const start = performance.now();
+
+            function tick(now) {
+                const progress = Math.min((now - start) / 900, 1);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(target * eased);
+                if (progress < 1) requestAnimationFrame(tick);
+            }
+
+            requestAnimationFrame(tick);
+        });
+
+        const hero = document.getElementById('t-hero-' + pk);
+        const compact = document.getElementById('t-compact-' + pk);
+        let ticking = false;
+
+        function updateOnScroll() {
+            const heroHeight = hero.offsetHeight;
+            const progress = Math.min(Math.max(window.scrollY / (heroHeight * 0.72), 0), 1);
+            hero.style.opacity = String(1 - progress);
+            hero.style.transform = 'translateY(' + (-16 * progress) + 'px) scale(' + (1 - 0.045 * progress) + ')';
+            compact.classList.toggle('visible', progress >= 0.96);
+            ticking = false;
+        }
+
+        window.addEventListener('scroll', () => {
+            if (!ticking) {
+                requestAnimationFrame(updateOnScroll);
+                ticking = true;
+            }
+        }, {passive: true});
+
+        const phaseId = "{{ selected_phase.pk|default:'' }}";
+        const qs = phaseId ? ('?phase=' + phaseId) : '';
+        Shell.registerPoll('tournament-' + pk, 'standings', '{% url "client_tournament_standings_poll" tournament.pk %}' + qs, 't-pane-tables-' + pk, 30000);
+        Shell.registerPoll('tournament-' + pk, 'fixtures', '{% url "client_tournament_fixtures_poll" tournament.pk %}' + qs, 't-pane-matches-' + pk, 15000);
+        Shell.registerPoll('tournament-' + pk, 'news', '{% url "client_tournament_news_poll" tournament.pk %}' + qs, 't-pane-news-' + pk, 60000);
+        Shell._syncPollers('tournament-' + pk);
+    })();
+</script>
+</body>
+</html>

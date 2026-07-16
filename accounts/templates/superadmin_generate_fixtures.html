@@ -1,0 +1,30 @@
+{% extends "superadmin_base.html" %}
+{% block title %}Generate Fixtures — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ phase }}{% endblock %}
+{% block page_title %}Generate Fixtures{% endblock %}
+{% block header_actions %}
+<a href="{% url 'phase_detail' phase.pk %}" class="btn-ghost">Cancel</a>
+{% endblock %}
+{% block content %}
+<form method="post" class="group" style="padding:24px;">
+    {% csrf_token %}
+    <div class="form-grid-columns">
+        <div class="form-field-box"><label>Sport</label>{{ form.sport }}</div>
+        <div class="form-field-box"><label>Start Date</label>{{ form.start_date }}</div>
+        <div class="form-field-box"><label>Duration (Days)</label>{{ form.duration }}</div>
+        <div class="form-field-box"><label>Schedule</label>{{ form.schedule_type }}</div>
+        <div class="form-field-box"><label>Format</label>{{ form.format }}</div>
+        <div class="form-field-box"><label>Legs</label>{{ form.legs }}</div>
+        <div id="extraOptions" style="display:none;">
+            <div class="form-field-box"><label>Groups</label>{{ form.groups }}</div>
+            <div class="form-field-box"><label>Qualify per Group</label>{{ form.qualify_per_group }}</div>
+        </div>
+    </div>
+    <button type="submit" class="btn-primary">Generate Fixtures</button>
+</form>
+<script>
+    document.getElementById('formatSelect').onchange = function() {
+        document.getElementById('extraOptions').style.display = (this.value === 'group_knockout') ? 'block' : 'none';
+    };
+</script>
+{% endblock %}

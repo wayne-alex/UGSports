@@ -1,0 +1,94 @@
+{% extends "superadmin_base.html" %}
+
+{% block title %}{{ tournament.name }} — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ tournament.season }}{% endblock %}
+{% block page_title %}{{ tournament.name }}{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'tournament_edit' tournament.pk %}" class="btn-ghost">
+    <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;stroke-width:2.2;margin-right:4px;vertical-align:-2px;"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    Edit
+</a>
+<a href="{% url 'tournament_desk' %}" class="btn-ghost">
+    <svg viewBox="0 0 24 24" style="width:15px;height:15px;stroke:currentColor;stroke-width:2.2;margin-right:4px;vertical-align:-2px;"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+    Back
+</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <h3>Status</h3>
+        <p style="font-size: 1.2rem;">
+            {% if tournament.status == 'ongoing' %}
+                <span class="badge live"><span class="live-dot"></span>Live</span>
+            {% elif tournament.status == 'upcoming' %}
+                <span class="badge pending">Upcoming</span>
+            {% else %}
+                <span class="badge success">Completed</span>
+            {% endif %}
+        </p>
+    </div>
+    <div class="metric-card">
+        <h3>Sports</h3>
+        <p>{{ tournament.sports.count }}<span>{{ tournament.season }}</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Phases</h3>
+        <p>{{ phase_count }}<span>ward → sub-county → county</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Window</h3>
+        <p style="font-size: 1.05rem;">
+            {% if tournament.start_date %}{{ tournament.start_date|date:"d M" }} — {{ tournament.end_date|date:"d M" }}{% else %}Not set{% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- ============= WARD PHASES ============= -->
+<div<!-- ============= WARD PHASES ============= -->
+<div class="group-header-row" style="margin-top:28px;">
+    <h3 class="group-header">Ward Phases</h3>
+    <a href="{% url 'phase_create' tournament.pk %}?stage=ward" class="btn-ghost">+ Add Ward Phase</a>
+</div>
+<div class="group">
+    {% for phase in ward_phases %}
+        {% include "superadmin_phase_row.html" with phase=phase avatar="WD" %}
+    {% empty %}
+    <div class="empty-state"><p>No ward phases created yet.</p></div>
+    {% endfor %}
+</div>
+
+<!-- ============= SUB-COUNTY PHASES ============= -->
+<div class="group-header-row">
+    <h3 class="group-header">Sub-County Phases</h3>
+    <a href="{% url 'phase_create' tournament.pk %}?stage=sub_county" class="btn-ghost">+ Add Sub-County Phase</a>
+</div>
+<div class="group">
+    {% for phase in sub_county_phases %}
+        {% include "superadmin_phase_row.html" with phase=phase avatar="SC" %}
+    {% empty %}
+    <div class="empty-state"><p>No sub-county phases created yet.</p></div>
+    {% endfor %}
+</div>
+
+<!-- ============= COUNTY / FINAL PHASES ============= -->
+<div class="group-header-row">
+    <h3 class="group-header">County &amp; Final Phases</h3>
+    <a href="{% url 'phase_create' tournament.pk %}?stage=county" class="btn-ghost">+ Add County Phase</a>
+</div>
+<div class="group">
+    {% for phase in county_phases %}
+        {% include "superadmin_phase_row.html" with phase=phase avatar="CO" %}
+    {% endfor %}
+    {% for phase in final_phases %}
+        {% include "superadmin_phase_row.html" with phase=phase avatar="FI" %}
+    {% empty %}
+    {% if not county_phases %}
+    <div class="empty-state"><p>No county or final phase created yet.</p></div>
+    {% endif %}
+    {% endfor %}
+</div>
+
+{% endblock %}

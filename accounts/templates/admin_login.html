@@ -1,0 +1,220 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UG Sports - Admin sign in</title>
+
+<style>
+    :root {
+        --pitch: #1B4332;
+        --ios-bg: #F2F2F7;
+        --ios-card: #FFFFFF;
+        --ios-label: #8E8E93;
+        --ios-separator: #E5E5EA;
+        --ios-text: #000000;
+        --ios-danger: #FF3B30;
+        --ios-danger-bg: #FFF1F0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+        background: var(--ios-bg);
+        color: var(--ios-text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .auth-shell { width: 100%; max-width: 360px; }
+
+    /* ===== BRAND ===== */
+    .brand { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 32px; }
+    .crest {
+        width: 68px; height: 68px; border-radius: 18px;
+        background: var(--pitch);
+        display: flex; align-items: center; justify-content: center;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .crest img { width: 40px; height: 40px; object-fit: contain; }
+    .brand-text { text-align: center; }
+    .brand-text h1 { font-size: 1.2rem; font-weight: 600; letter-spacing: -0.2px; }
+    .brand-text p { font-size: 0.82rem; color: var(--ios-label); margin-top: 2px; }
+
+    /* ===== ERROR ===== */
+    .error-banner {
+        display: flex; align-items: center; gap: 8px;
+        background: var(--ios-danger-bg); color: var(--ios-danger);
+        font-size: 0.85rem; font-weight: 500; padding: 11px 14px;
+        border-radius: 12px; margin-bottom: 16px;
+    }
+    .error-banner svg { width: 16px; height: 16px; stroke: var(--ios-danger); fill: none; stroke-width: 2; flex-shrink: 0; }
+
+    /* ===== GROUPED LIST (iOS form style) ===== */
+    .group {
+        background: var(--ios-card);
+        border-radius: 14px;
+        overflow: hidden;
+        margin-bottom: 20px;
+    }
+    .group-row {
+        display: flex; align-items: center;
+        position: relative;
+        padding: 13px 16px;
+    }
+    .group-row + .group-row {
+        border-top: 0.5px solid var(--ios-separator);
+    }
+    .group-row input {
+        flex: 1;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-family: inherit;
+        font-size: 1rem;
+        color: var(--ios-text);
+        padding: 0;
+    }
+    .group-row input::placeholder { color: #C7C7CC; }
+
+    .eye-btn {
+        background: none; border: none; cursor: pointer; padding: 4px;
+        display: flex; align-items: center; justify-content: center; margin-left: 8px;
+    }
+    .eye-btn svg { width: 19px; height: 19px; stroke: var(--ios-label); fill: none; stroke-width: 1.8; }
+
+    /* ===== FORGOT LINK ===== */
+    .forgot-row { text-align: right; margin: -8px 4px 20px 4px; }
+    .forgot-row a { font-size: 0.86rem; color: var(--pitch); text-decoration: none; font-weight: 500; }
+    .forgot-row a:active { opacity: 0.5; }
+
+    /* ===== REMEMBER TOGGLE ROW ===== */
+    .toggle-row .group-row { justify-content: space-between; }
+    .toggle-row .row-label { font-size: 1rem; }
+
+    .ios-switch {
+        position: relative;
+        width: 51px; height: 31px;
+        border-radius: 999px;
+        background: #E9E9EA;
+        border: none;
+        cursor: pointer;
+        flex-shrink: 0;
+        transition: background 0.2s ease;
+    }
+    .ios-switch::after {
+        content: "";
+        position: absolute; top: 2px; left: 2px;
+        width: 27px; height: 27px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 3px 8px rgba(0,0,0,0.18), 0 1px 1px rgba(0,0,0,0.1);
+        transition: transform 0.2s ease;
+    }
+    .ios-switch.on { background: var(--pitch); }
+    .ios-switch.on::after { transform: translateX(20px); }
+
+    /* ===== SUBMIT ===== */
+    .submit-btn {
+        width: 100%;
+        padding: 15px;
+        background: var(--pitch);
+        color: #fff;
+        font-family: inherit;
+        font-size: 1rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 14px;
+        cursor: pointer;
+    }
+    .submit-btn:active { opacity: 0.75; }
+
+    .footnote {
+        text-align: center;
+        margin-top: 24px;
+        font-size: 0.78rem;
+        color: var(--ios-label);
+    }
+</style>
+</head>
+<body>
+
+    <div class="auth-shell">
+
+        <div class="brand">
+            <div class="crest">
+                <img src="{% static 'UG_LOGO.png' %}" alt="Uasin Gishu County Logo">
+            </div>
+            <div class="brand-text">
+                <h1>UG Sports</h1>
+                <p>Admin sign in</p>
+            </div>
+        </div>
+
+        {% if form.errors %}
+        <div class="error-banner">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>
+            <span>Incorrect email or password</span>
+        </div>
+        {% endif %}
+
+        <form method="post" action="" novalidate>
+            {% csrf_token %}
+
+            <div class="group">
+                <div class="group-row">
+                    <input type="email" id="id_email" name="email" placeholder="Email" autocomplete="username" required>
+                </div>
+                <div class="group-row">
+                    <input type="password" id="id_password" name="password" placeholder="Password" autocomplete="current-password" required>
+                    <button type="button" class="eye-btn" onclick="togglePassword()" aria-label="Show password">
+                        <svg id="eye-icon" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="forgot-row">
+                <a href="">Forgot password?</a>
+            </div>
+
+            <div class="group toggle-row">
+                <div class="group-row">
+                    <span class="row-label">Remember me</span>
+                    <button type="button" class="ios-switch" id="remember-switch" onclick="toggleSwitch()" aria-label="Remember me"></button>
+                    <input type="hidden" name="remember" id="remember-input" value="false">
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">Sign In</button>
+        </form>
+
+        <p class="footnote">Uasin Gishu County · Restricted to authorized staff</p>
+
+    </div>
+
+    <script>
+        function togglePassword() {
+            const input = document.getElementById('id_password');
+            const eye = document.getElementById('eye-icon');
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            eye.innerHTML = isHidden
+                ? '<path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.6 21.6 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a21.6 21.6 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/>'
+                : '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>';
+        }
+
+        function toggleSwitch() {
+            const sw = document.getElementById('remember-switch');
+            const input = document.getElementById('remember-input');
+            const isOn = sw.classList.toggle('on');
+            input.value = isOn ? 'true' : 'false';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+{% extends "superadmin_base.html" %}
+{% block title %}Select Teams — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ phase.tournament.name }}{% endblock %}
+{% block page_title %}Select Teams for {{ phase.scope_label }}{% endblock %}
+{% block header_actions %}
+<a href="{% url 'phase_detail' phase.pk %}" class="btn-ghost">Cancel</a>
+{% endblock %}
+{% block content %}
+<form method="post">
+    {% csrf_token %}
+    <div class="group">
+        {% for entry in feeder_entries %}
+        <div class="group-row">
+            <div class="row-left">
+                <input type="checkbox" name="team_ids" value="{{ entry.team.pk }}" id="team-{{ entry.team.pk }}" style="width:16px;height:16px;">
+                <label for="team-{{ entry.team.pk }}" style="cursor:pointer;">
+                    <div class="cell-main">{{ entry.team.name }}</div>
+                    <div class="cell-sub">{{ entry.team.ward.name }} Ward · qualified from {{ entry.phase.scope_label }}</div>
+                </label>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <p>No teams available yet from the level below. Teams must be entered and results verified at {{ phase.get_stage_display|lower }}'s feeder stage first.</p>
+        </div>
+        {% endfor %}
+    </div>
+    {% if feeder_entries %}
+    <div class="form-actions" style="margin-top:16px;">
+        <a href="{% url 'phase_detail' phase.pk %}" class="btn-ghost">Cancel</a>
+        <button type="submit" class="btn-primary">Advance Selected Teams</button>
+    </div>
+    {% endif %}
+</form>
+{% endblock %}

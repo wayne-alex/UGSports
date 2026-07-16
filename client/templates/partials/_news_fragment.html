@@ -1,0 +1,18 @@
+{% for post in news_posts %}
+<div class="sports-card news-card-inner">
+    <span class="news-tag">{{ post.get_tag_display }}</span>
+    <h3>{{ post.title }}</h3>
+    <p>{{ post.body|truncatewords:35 }}</p>
+    <div class="news-meta">
+        <span>{{ post.author.get_full_name|default:"County Sports Dept." }}</span>
+        <span>{{ post.published_at|timesince }} ago</span>
+    </div>
+</div>
+{% empty %}
+<div class="sports-card empty-state">
+    <div class="icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v16H4z"/><path d="M4 9h16"/><path d="M9 4v16"/></svg>
+    </div>
+    <p>No news posted for this scope yet.</p>
+</div>
+{% endfor %}

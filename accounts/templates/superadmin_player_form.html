@@ -1,0 +1,39 @@
+{% extends "superadmin_base.html" %}
+{% block title %}Add Player — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ phase }}{% endblock %}
+{% block page_title %}Add Player{% endblock %}
+{% block header_actions %}
+<a href="{% url 'phase_detail' phase.pk %}" class="btn-ghost">Cancel</a>
+{% endblock %}
+{% block content %}
+<div class="group" style="padding:24px;">
+    {% if form.non_field_errors %}<div style="color:var(--rust); font-size:0.82rem; margin-bottom:12px;">{{ form.non_field_errors }}</div>{% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Player Name</label>{{ form.name }}
+                {% if form.name.errors %}<div style="color:var(--rust); font-size:0.75rem;">{{ form.name.errors }}</div>{% endif %}
+            </div>
+            <div class="form-field-box">
+                <label>Team</label>{{ form.team }}
+                {% if form.team.errors %}<div style="color:var(--rust); font-size:0.75rem;">{{ form.team.errors }}</div>{% endif %}
+            </div>
+            <div class="form-field-box">
+                <label>Jersey Number</label>{{ form.jersey_number }}
+                {% if form.jersey_number.errors %}<div style="color:var(--rust); font-size:0.75rem;">{{ form.jersey_number.errors }}</div>{% endif %}
+            </div>
+            <div class="form-field-box">
+                <label>Position</label>{{ form.position }}
+            </div>
+            <div class="form-field-box">
+                <label>National ID</label>{{ form.national_id }}
+            </div>
+        </div>
+        <div class="form-actions">
+            <a href="{% url 'phase_detail' phase.pk %}" class="btn-ghost">Cancel</a>
+            <button type="submit" class="btn-primary">Register Player</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

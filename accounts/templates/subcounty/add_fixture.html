@@ -1,0 +1,106 @@
+{% extends "subcounty/subcountyadmin_base.html" %}
+{% block title %}Schedule Match | {{ sub_county.name }}{% endblock %}
+{% block page_eyebrow %}{{ phase.tournament.name }}{% endblock %}
+{% block page_title %}Schedule New Match{% endblock %}
+
+{% block content %}
+
+<div class="group-header-row">
+    <h3 class="group-header">Match Details</h3>
+    <a href="{% url 'subcounty_phase_detail' phase.id %}" class="btn-ghost">Cancel</a>
+</div>
+
+<div class="group" style="padding: 24px; max-width: 680px; margin-top: 12px;">
+    <form method="post">
+        {% csrf_token %}
+        
+        <!-- Validation Error Message Block -->
+        {% if form.non_field_errors %}
+            <div style="background-color: #fee2e2; border-left: 4px solid #ef4444; color: #991b1b; padding: 12px; border-radius: 6px; margin-bottom: 20px; font-size: 0.875rem;">
+                {% for error in form.non_field_errors %}
+                    <p style="margin: 0;">{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <!-- Row 1: Sport Selection -->
+        <div style="margin-bottom: 20px;">
+            <label class="form-label" style="display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 6px;">Select Sport Discipline <span style="color:red;">*</span></label>
+            {{ form.phase_sport }}
+            {% if form.phase_sport.errors %}
+                <span class="cell-sub" style="color: #ef4444;">{{ form.phase_sport.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        <!-- Row 2: Group (Optional) -->
+        <div style="margin-bottom: 20px;">
+            <label class="form-label" style="display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 6px;">Assigned Group <span class="cell-sub">(Optional)</span></label>
+            {{ form.group }}
+            {% if form.group.errors %}
+                <span class="cell-sub" style="color: #ef4444;">{{ form.group.errors.0 }}</span>
+            {% endif %}
+        </div>
+
+        <!-- Row 3: Competitors -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+            <div>
+                <label class="form-label" style="display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 6px;">Home Team <span style="color:red;">*</span></label>
+                {{ form.home_team }}
+                {% if form.home_team.errors %}
+                    <span class="cell-sub" style="color: #ef4444;">{{ form.home_team.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div>
+                <label class="form-label" style="display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 6px;">Away Team <span style="color:red;">*</span></label>
+                {{ form.away_team }}
+                {% if form.away_team.errors %}
+                    <span class="cell-sub" style="color: #ef4444;">{{ form.away_team.errors.0 }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Row 4: Round & Leg Settings -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+            <div>
+                <label class="form-label" style="display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 6px;">Round Index (Matchday) <span style="color:red;">*</span></label>
+                {{ form.round_number }}
+                {% if form.round_number.errors %}
+                    <span class="cell-sub" style="color: #ef4444;">{{ form.round_number.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div>
+                <label class="form-label" style="display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 6px;">Leg <span style="color:red;">*</span></label>
+                {{ form.leg }}
+                {% if form.leg.errors %}
+                    <span class="cell-sub" style="color: #ef4444;">{{ form.leg.errors.0 }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Row 5: Venue & Timing -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div>
+                <label class="form-label" style="display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 6px;">Venue / Ground</label>
+                {{ form.venue }}
+                {% if form.venue.errors %}
+                    <span class="cell-sub" style="color: #ef4444;">{{ form.venue.errors.0 }}</span>
+                {% endif %}
+            </div>
+            <div>
+                <label class="form-label" style="display: block; font-weight: 500; font-size: 0.875rem; margin-bottom: 6px;">Kickoff Date &amp; Time</label>
+                {{ form.kickoff_at }}
+                {% if form.kickoff_at.errors %}
+                    <span class="cell-sub" style="color: #ef4444;">{{ form.kickoff_at.errors.0 }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Submit Controls -->
+        <div style="display: flex; gap: 12px; margin-top: 32px;">
+            <button type="submit" class="btn-primary" style="padding: 10px 24px; border-radius:6px; font-size:0.875rem;">Save Fixture</button>
+            <a href="{% url 'subcounty_phase_detail' phase.id %}" class="btn-ghost" style="padding: 10px 24px; border-radius:6px; font-size:0.875rem;">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% endblock %}

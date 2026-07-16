@@ -1,0 +1,325 @@
+<style>
+    .team-search-wrap {
+        position: relative;
+        margin-bottom: 14px;
+    }
+    .team-search-input {
+        width: 100%;
+        padding: 12px 16px 12px 40px;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: var(--card);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.85rem;
+        color: var(--ink);
+    }
+    .team-search-input:focus { outline: none; border-color: var(--pitch-light); }
+    .team-search-icon {
+        position: absolute;
+        left: 13px; top: 50%;
+        transform: translateY(-50%);
+        width: 16px; height: 16px;
+        stroke: var(--ink-faint);
+        stroke-width: 2.2;
+        fill: none;
+        pointer-events: none;
+    }
+
+    .team-stat-row { cursor: pointer; transition: background 0.15s ease; }
+    .team-stat-row:hover { background: #FAFBFC; }
+    .team-stat-row:active { background: #F1F5F9; }
+    .team-stat-row.filtered-out { display: none; }
+
+    /* ---------- overlay ---------- */
+    .team-overlay-backdrop {
+        position: fixed; inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(3px);
+        z-index: 300;
+        display: none;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+    }
+    .team-overlay-backdrop.open { display: block; opacity: 1; }
+
+    .team-overlay {
+        position: fixed;
+        top: 0; right: 0; bottom: 0;
+        width: 100%;
+        max-width: 440px;
+        background: var(--bg);
+        transform: translateX(100%);
+        transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        overflow-y: auto;
+        z-index: 301;
+    }
+    .team-overlay-backdrop.open .team-overlay { transform: translateX(0); }
+
+    .team-overlay-header {
+        background: linear-gradient(150deg, var(--pitch-light), var(--pitch-dark));
+        color: #fff;
+        padding: 24px 22px;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+    .team-overlay-close {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(255,255,255,0.15);
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        float: right;
+    }
+    .team-overlay-close svg { width: 15px; height: 15px; stroke: #fff; stroke-width: 2.4; }
+    .team-overlay-name { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; font-weight: 700; margin-top: 12px; }
+    .team-overlay-ward { font-size: 0.8rem; color: rgba(255,255,255,0.7); margin-top: 3px; }
+
+    .team-overlay-body { padding: 20px 22px 40px; }
+
+    .to-section-title {
+        font-size: 0.68rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.6px;
+        color: var(--ink-soft);
+        margin: 22px 0 10px;
+    }
+    .to-section-title:first-child { margin-top: 0; }
+
+    .to-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    .to-stat {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 8px;
+        text-align: center;
+    }
+    .to-stat .v { font-family: 'JetBrains Mono', monospace; font-size: 1rem; font-weight: 700; color: var(--pitch); }
+    .to-stat .k { font-size: 0.58rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; margin-top: 3px; }
+
+    .to-form-row { display: flex; gap: 6px; }
+    .to-form-pill {
+        width: 30px; height: 30px;
+        border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.72rem; font-weight: 700;
+        color: #fff;
+    }
+    .to-form-pill.W { background: var(--pitch); }
+    .to-form-pill.D { background: var(--ink-faint); }
+    .to-form-pill.L { background: var(--rust); }
+
+    .to-table-card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .to-table-card .pos { font-family: 'Space Grotesk', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--pitch); }
+    .to-table-card .lbl { font-size: 0.72rem; color: var(--ink-soft); }
+    .to-ko-badge {
+        display: inline-block;
+        font-size: 0.68rem; font-weight: 700;
+        padding: 4px 11px;
+        border-radius: 99px;
+        text-transform: uppercase;
+    }
+    .to-ko-badge.won { background: #E9EEF1; color: var(--pitch); }
+    .to-ko-badge.eliminated { background: #FEF2F2; color: var(--rust); }
+    .to-ko-badge.pending { background: #FFF7ED; color: var(--ochre-deep); }
+
+    .to-fixture-row {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 0.8rem;
+    }
+    .to-fixture-row:last-child { border-bottom: none; }
+    .to-fixture-opp { font-weight: 600; }
+    .to-fixture-meta { color: var(--ink-soft); font-size: 0.72rem; }
+    .to-fixture-score { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--pitch); }
+
+    .to-player-row {
+        display: flex; align-items: center; gap: 10px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+    }
+    .to-player-row:last-child { border-bottom: none; }
+    .to-player-jersey {
+        width: 26px; height: 26px;
+        border-radius: 7px;
+        background: #F1F5F9;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.66rem; font-weight: 700;
+        color: var(--pitch);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .to-player-name { font-size: 0.82rem; font-weight: 600; flex: 1; }
+    .to-player-pos { font-size: 0.68rem; color: var(--ink-soft); }
+    .to-player-goals { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; color: var(--pitch); width: 24px; text-align: right; }
+
+    .to-loading { text-align: center; padding: 40px 0; color: var(--ink-soft); font-size: 0.82rem; }
+</style>
+
+<div class="sports-card" style="background:none; border:none; box-shadow:none; margin-bottom:0;">
+    <div class="team-search-wrap">
+        <svg class="team-search-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" class="team-search-input" id="team-search-input" placeholder="Search teams..." oninput="TeamOverlay.filter(this.value)">
+    </div>
+</div>
+
+<div class="sports-card">
+    {% for team in teams %}
+    <div class="team-stat-row" onclick="TeamOverlay.open({{ team.id }})" data-team-name="{{ team.name|lower }}">
+        <div class="team-stat-meta"><div class="name">{{ team.name }}</div><div class="ward">{{ team.ward.name }} Ward</div></div>
+        <div class="team-stat-figs">
+            <div class="team-stat-fig"><div class="v">{{ team.player_count }}</div><div class="k">Squad</div></div>
+            <div class="team-stat-fig"><div class="v">{{ team.total_goals|default:0 }}</div><div class="k">Goals</div></div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state"><p>No teams entered yet.</p></div>
+    {% endfor %}
+</div>
+
+<div class="team-overlay-backdrop" id="team-overlay-backdrop" onclick="TeamOverlay.close(event)">
+    <div class="team-overlay" onclick="event.stopPropagation()">
+        <div class="team-overlay-header">
+            <button class="team-overlay-close" onclick="TeamOverlay.close()">
+                <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <div class="team-overlay-name" id="to-name">&nbsp;</div>
+            <div class="team-overlay-ward" id="to-ward"></div>
+        </div>
+        <div class="team-overlay-body" id="to-body">
+            <div class="to-loading">Loading team...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.TeamOverlay = window.TeamOverlay || {
+        currentPhaseId: "{{ selected_phase.id|default:'' }}",
+
+        filter(query) {
+            const q = query.trim().toLowerCase();
+            document.querySelectorAll('.team-stat-row').forEach(row => {
+                row.classList.toggle('filtered-out', q && !row.dataset.teamName.includes(q));
+            });
+        },
+
+        async open(teamId) {
+            const backdrop = document.getElementById('team-overlay-backdrop');
+            const body = document.getElementById('to-body');
+            document.getElementById('to-name').textContent = 'Loading...';
+            document.getElementById('to-ward').textContent = '';
+            body.innerHTML = '<div class="to-loading">Loading team...</div>';
+            backdrop.classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            const qs = this.currentPhaseId ? `?phase=${this.currentPhaseId}` : '';
+            try {
+                const res = await fetch(`/api/team/${teamId}/detail/${qs}`);
+                const data = await res.json();
+                this._render(data);
+            } catch (e) {
+                body.innerHTML = '<div class="to-loading">Could not load team details.</div>';
+            }
+        },
+
+        close(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('team-overlay-backdrop').classList.remove('open');
+            document.body.style.overflow = '';
+        },
+
+        _esc(s) {
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        },
+
+        _render(data) {
+            document.getElementById('to-name').textContent = data.team.name;
+            document.getElementById('to-ward').textContent = data.team.ward + ' Ward';
+
+            const ov = data.overview;
+            const formHtml = data.recent_form.length
+                ? `<div class="to-form-row">${data.recent_form.map(r => `<div class="to-form-pill ${r}">${r}</div>`).join('')}</div>`
+                : `<p style="font-size:0.8rem;color:var(--ink-soft);">No matches played yet.</p>`;
+
+            let tableHtml = '';
+            const t = data.table_info;
+            if (t.type === 'table' || t.type === 'group_table') {
+                tableHtml = `
+                    <div class="to-table-card">
+                        <div><div class="pos">#${t.position}</div><div class="lbl">of ${t.total_teams} teams${t.group_name ? ' &middot; Group ' + this._esc(t.group_name) : ''}</div></div>
+                        <div style="text-align:right;"><div class="pos">${t.points}</div><div class="lbl">points</div></div>
+                    </div>`;
+                if (t.knockout_status) {
+                    tableHtml += `<div style="margin-top:10px;"><span class="to-ko-badge ${t.knockout_status}">${t.knockout_status === 'won' ? 'Through to next round' : t.knockout_status === 'eliminated' ? 'Eliminated' : 'Awaiting result'} &middot; Round ${t.knockout_round}</span></div>`;
+                }
+            } else if (t.type === 'knockout') {
+                tableHtml = `<div class="to-table-card"><span class="to-ko-badge ${t.status}">${t.status === 'won' ? 'Through to next round' : t.status === 'eliminated' ? 'Eliminated' : 'Awaiting result'} &middot; Round ${t.round}</span></div>`;
+            } else {
+                tableHtml = `<p style="font-size:0.8rem;color:var(--ink-soft);">No table or bracket data yet.</p>`;
+            }
+
+            const fixturesHtml = data.fixtures.length
+                ? data.fixtures.map(f => `
+                    <div class="to-fixture-row">
+                        <div>
+                            <div class="to-fixture-opp">${f.is_home ? 'vs' : '@'} ${this._esc(f.opponent)}</div>
+                            <div class="to-fixture-meta">${this._esc(f.kickoff_at)}</div>
+                        </div>
+                        <div class="to-fixture-score">${f.score || f.status}</div>
+                    </div>`).join('')
+                : `<p style="font-size:0.8rem;color:var(--ink-soft);">No fixtures yet.</p>`;
+
+            const playersHtml = data.players.length
+                ? data.players.map(p => `
+                    <div class="to-player-row">
+                        <div class="to-player-jersey">#${p.jersey_number}</div>
+                        <div>
+                            <div class="to-player-name">${this._esc(p.name)}</div>
+                            <div class="to-player-pos">${this._esc(p.position)} &middot; ${p.assists} assists &middot; ${p.yellow_card}🟨 ${p.red_card}🟥</div>
+                        </div>
+                        <div class="to-player-goals">${p.goals}</div>
+                    </div>`).join('')
+                : `<p style="font-size:0.8rem;color:var(--ink-soft);">No players registered.</p>`;
+
+            document.getElementById('to-body').innerHTML = `
+                <div class="to-section-title">Overview</div>
+                <div class="to-stats-grid">
+                    <div class="to-stat"><div class="v">${ov.played}</div><div class="k">Played</div></div>
+                    <div class="to-stat"><div class="v">${ov.won}-${ov.drawn}-${ov.lost}</div><div class="k">W-D-L</div></div>
+                    <div class="to-stat"><div class="v">${ov.win_rate}%</div><div class="k">Win Rate</div></div>
+                    <div class="to-stat"><div class="v">${ov.goals_for}</div><div class="k">Goals For</div></div>
+                    <div class="to-stat"><div class="v">${ov.goals_against}</div><div class="k">Goals Against</div></div>
+                    <div class="to-stat"><div class="v">${ov.goal_difference > 0 ? '+' : ''}${ov.goal_difference}</div><div class="k">Goal Diff</div></div>
+                </div>
+
+                <div class="to-section-title">Recent Form</div>
+                ${formHtml}
+
+                <div class="to-section-title">Table / Bracket</div>
+                ${tableHtml}
+
+                <div class="to-section-title">Fixtures</div>
+                <div>${fixturesHtml}</div>
+
+                <div class="to-section-title">Squad</div>
+                <div>${playersHtml}</div>
+            `;
+        }
+    };
+</script>

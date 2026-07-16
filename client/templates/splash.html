@@ -1,0 +1,156 @@
+{% load static %}
+<!DOCTYPE html>
+
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Governors Cup - Uasin Gishu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Base Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: #ffffff;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Centered Splash Overlay */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease, visibility 0.6s;
+        }
+
+        /* Brand Stack Container */
+        .brand-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(15px);
+            animation: fadeInUp 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        }
+
+        /* Uasin Gishu Logo Frame */
+        .logo-container {
+            width: 110px;
+            height: 110px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Tournament Typography */
+        .title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #1E5631; /* Safari Green */
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        /* Concentric Spinner below the text */
+        .spinner {
+            margin-top: 25px;
+            width: 40px;
+            height: 40px;
+            border: 3.5px solid #eef2f0;
+            border-top: 3.5px solid #1E5631; /* Safari Green */
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Transition state triggered via JavaScript */
+        .fade-out {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        #main-app {
+            padding: 40px;
+            text-align: center;
+            color: #1E5631;
+        }
+
+        /* Keyframes Animations */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- OVERLAY SPLASH SCREEN -->
+    <div id="splash-screen">
+        <div class="brand-stack">
+            <!-- Uasin Gishu Official Logo Placement -->
+            <div class="logo-container">
+                <img src="{% static 'UG_LOGO.png' %}" alt="Uasin Gishu County Logo">
+            </div>
+
+            <!-- Elegant Title Header -->
+            <h1 class="title">Uasin Gishu County</h1>
+
+            <!-- Clean Loading Spinner -->
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const splash = document.getElementById("splash-screen");
+
+
+            const MIN_DISPLAY_MS = 2200;
+            const DASHBOARD_URL = "{% url 'client_lobby' %}";
+
+            setTimeout(() => {
+                splash.classList.add("fade-out");
+                setTimeout(() => {
+                    window.location.href = DASHBOARD_URL;
+                }, 600);
+            }, MIN_DISPLAY_MS);
+        });
+    </script>
+</body>
+</html>

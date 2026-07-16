@@ -1,0 +1,59 @@
+{% extends "superadmin_base.html" %}
+{% block title %}Add Team Portal | {{ ward.name }} Ward{% endblock %}
+{% block page_eyebrow %}{{ ward.name }} Ward{% endblock %}
+{% block page_title %}Add New Team{% endblock %}
+
+{% block header_actions %}
+<a href="{% url 'phase_detail' phase.pk %}" class="btn-ghost">Cancel</a>
+{% endblock %}
+
+{% block content %}
+<div class="group" style="padding:24px;">
+    <form method="post" enctype="multipart/form-data" id="team-form">
+        {% csrf_token %}
+
+        <!-- BULK UPLOAD SECTION -->
+        <div id="bulk-section" class="form-field-box" style="margin-bottom: 30px; border: 2px dashed #ccc; padding: 20px; border-radius: 8px;">
+            <label><strong>Bulk Upload (CSV)</strong></label>
+            <input type="file" name="csv_file" id="csv-input" accept=".csv">
+            <p style="font-size: 0.8rem; color: #666; margin-top: 5px;">Uploading a file will ignore the individual form fields below.</p>
+        </div>
+
+        <!-- SINGLE ENTRY SECTION -->
+        <div id="manual-section">
+            <h4 style="margin-bottom: 15px;">Or Register Individual Team</h4>
+            <div class="form-grid-columns">
+                <div class="form-field-box">
+                    <label>Team Name</label>{{ form.name }}
+                </div>
+                <div class="form-field-box">
+                    <label>Sport</label>{{ form.sport }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions" style="margin-top: 20px;">
+            <button type="submit" class="btn-primary" id="submit-btn">Add Team(s)</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    const fileInput = document.getElementById('csv-input');
+    const manualSection = document.getElementById('manual-section');
+    // Get all required inputs inside the manual section
+    const requiredInputs = manualSection.querySelectorAll('input[required], select[required]');
+
+    fileInput.addEventListener('change', function() {
+        if (this.value) {
+            manualSection.style.display = 'none';
+            // Remove 'required' so the browser doesn't block submission
+            requiredInputs.forEach(input => input.removeAttribute('required'));
+        } else {
+            manualSection.style.display = 'block';
+            // Add 'required' back
+            requiredInputs.forEach(input => input.setAttribute('required', 'required'));
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,551 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ tournament.name }} — UG Sports</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --pitch: #1B4332;
+        --pitch-dark: #0C2417;
+        --ochre: #D98A3D;
+        --ochre-deep: #B36B23;
+        --rust: #C1440E;
+        --cream: #FFFFFF;
+        --card: #FFFFFF;
+        --ink: #0F172A;
+        --ink-soft: #64748B;
+        --line: #E2E8F0;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+        font-family: 'Inter', sans-serif;
+        background: #F8FAFC;
+        color: var(--ink);
+        -webkit-font-smoothing: antialiased;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .app-viewport-shell {
+        width: 100%;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding-bottom: 86px;
+    }
+
+    h1, h2, h3, .display { font-family: 'Space Grotesk', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; font-variant-numeric: tabular-nums; }
+
+    .brand-hero {
+        position: relative;
+        background:
+            radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 1.6px),
+            linear-gradient(135deg, var(--pitch) 0%, var(--pitch-dark) 100%);
+        background-size: 14px 14px, cover;
+        padding: 24px;
+        color: #fff;
+    }
+
+    .brand-hero::after {
+        content: "";
+        position: absolute;
+        left: 0; right: 0; bottom: 0;
+        height: 3px;
+        background: linear-gradient(90deg, transparent, var(--ochre), transparent);
+    }
+
+    .header-row { display: flex; align-items: center; justify-content: space-between; max-width: 1400px; margin: 0 auto; width: 100%; }
+    .brand-profile { display: flex; align-items: center; gap: 14px; }
+
+    .crest {
+        width: 46px; height: 46px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.15);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .crest img { width: 28px; height: 28px; object-fit: contain; }
+
+    .brand-title h1 {
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+    }
+    .brand-title p {
+        font-size: 0.65rem;
+        color: var(--ochre);
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-top: 1px;
+    }
+
+    .pill-badge {
+        background: rgba(217, 138, 61, 0.15);
+        color: var(--ochre);
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 6px 14px;
+        border-radius: 99px;
+        border: 1px solid rgba(217, 138, 61, 0.3);
+    }
+
+    .stage-rail {
+        margin: 24px auto 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        max-width: 1400px;
+        width: 100%;
+    }
+    .stage-seg { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .stage-track { height: 4px; border-radius: 4px; background: rgba(255,255,255,0.12); overflow: hidden; }
+    .stage-track.done .stage-fill { width: 100%; background: var(--ochre); }
+    .stage-track.active .stage-fill { width: 60%; background: var(--ochre); animation: fillPulse 2s ease-in-out infinite; }
+    .stage-fill { height: 100%; width: 0%; }
+    .stage-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: rgba(255,255,255,0.4); }
+    .stage-seg.active .stage-label, .stage-seg.done .stage-label { color: rgba(255,255,255,0.9); }
+
+    @keyframes fillPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+    .main-workspace {
+        display: flex;
+        flex-direction: column;
+        flex-grow: 1;
+        max-width: 1400px;
+        width: 100%;
+        margin: 0 auto;
+    }
+
+    .filter-wrapper { padding: 24px 24px 0 24px; }
+    .filter-container {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        background: #FFFFFF;
+        padding: 20px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
+    }
+
+    .filter-box { flex: 1; position: relative; }
+    .filter-box label {
+        display: block;
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--ink-soft);
+        margin-bottom: 6px;
+        padding-left: 2px;
+    }
+
+    .filter-select {
+        width: 100%;
+        background: #F8FAFC;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 16px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--ink);
+        outline: none;
+        cursor: pointer;
+        transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748B' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 16px center;
+        background-size: 14px;
+        padding-right: 44px;
+    }
+    .filter-select:hover { border-color: #CBD5E1; background-color: #F1F5F9; }
+    .filter-select:focus { border-color: var(--pitch); background-color: #FFFFFF; box-shadow: 0 0 0 4px rgba(27, 67, 50, 0.08); }
+    .filter-select:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .app-container { padding: 24px; flex-grow: 1; }
+    .view-section { display: none; }
+    .view-section.active { display: block; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    .section-heading {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--ink);
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+    }
+    .section-heading .sub { font-size: 0.7rem; font-weight: 600; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.6px; }
+
+    .sports-card {
+        background: var(--card);
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        margin-bottom: 20px;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+        overflow: hidden;
+    }
+
+    .card-top-bar {
+        background: #F8FAFC;
+        padding: 12px 20px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        color: var(--pitch);
+        display: flex;
+        justify-content: space-between;
+        text-transform: uppercase;
+        letter-spacing: 0.6px;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .league-table-header { display: flex; padding: 10px 20px; background: #F8FAFC; font-size: 0.62rem; font-weight: 700; color: var(--ink-soft); text-transform: uppercase; border-bottom: 1px solid var(--line); }
+    .col-team { flex: 1; } .col-data { width: 44px; text-align: center; }
+    .league-row { display: flex; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+    .league-row:last-child { border-bottom: none; }
+    .team-meta { display: flex; align-items: center; gap: 14px; flex: 1; }
+    .team-pos { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 700; color: var(--ink-soft); width: 16px; }
+    .kit-badge { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-size: 0.65rem; font-weight: 700; color: var(--pitch); background: #F1F5F9; border: 1px solid var(--line); }
+    .team-lbl { font-size: 0.85rem; font-weight: 600; }
+    .cell-data { width: 44px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--ink); }
+    .cell-data.bold { font-weight: 700; color: var(--pitch); }
+
+    .match-row { padding: 10px 20px 20px; display: flex; flex-direction: column; }
+    .match-line { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
+    .match-line + .match-line { border-top: 1px dashed var(--line); }
+    .match-team-block { display: flex; align-items: center; gap: 12px; }
+    .score-tile { min-width: 32px; text-align: center; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; font-weight: 700; color: #fff; background: var(--pitch-dark); border-radius: 8px; padding: 4px 10px; }
+    .live-indicator { display: inline-flex; align-items: center; gap: 6px; background: #FEF2F2; color: var(--rust); padding: 4px 12px; border-radius: 99px; font-size: 0.6rem; font-weight: 700; }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rust); animation: pulse 1.4s infinite; }
+
+    .news-card { padding: 24px; }
+    .news-tag { display: inline-block; font-size: 0.6rem; font-weight: 700; color: var(--pitch); background: #E2E8F0; padding: 4px 12px; border-radius: 99px; text-transform: uppercase; margin-bottom: 12px; }
+    .news-card h3 { font-size: 1.05rem; font-weight: 700; line-height: 1.4; margin-bottom: 10px; }
+    .news-card p { font-size: 0.85rem; color: var(--ink-soft); line-height: 1.6; }
+    .news-meta { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 0.68rem; color: var(--ink-soft); display: flex; justify-content: space-between; }
+
+    .search-shell { display: flex; align-items: center; gap: 12px; background: #FFFFFF; border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-bottom: 20px; }
+    .search-shell svg { width: 18px; height: 18px; stroke: var(--ink-soft); fill: none; }
+    .search-shell input { border: none; outline: none; background: transparent; font-family: 'Inter', sans-serif; font-size: 0.85rem; color: var(--ink); width: 100%; }
+    .empty-state { padding: 50px 24px; text-align: center; }
+    .empty-state .icon { width: 52px; height: 52px; margin: 0 auto 16px; border-radius: 50%; background: #F1F5F9; display: flex; align-items: center; justify-content: center; }
+    .empty-state .icon svg { width: 24px; height: 24px; stroke: var(--ochre-deep); fill: none; }
+    .empty-state p { font-size: 0.85rem; color: var(--ink-soft); max-width: 280px; margin: 0 auto; line-height: 1.6; }
+
+    .nav-wrapper {
+        position: fixed; bottom: 0; left: 0; width: 100%; height: 76px;
+        background: rgba(255, 255, 255, 0.96);
+        backdrop-filter: blur(12px);
+        border-top: 1px solid var(--line);
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        z-index: 1000;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.03);
+    }
+
+    .nav-btn {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        color: #94A3B8; font-size: 0.65rem; font-weight: 600; gap: 5px;
+        width: 25%; height: 100%; cursor: pointer; position: relative;
+    }
+    .nav-btn svg {
+        width: 22px; height: 22px; fill: none; stroke: #94A3B8; stroke-width: 2;
+        stroke-linecap: round; stroke-linejoin: round; transition: all 0.2s ease;
+    }
+    .nav-btn.active { color: var(--pitch); }
+    .nav-btn.active svg { stroke: var(--pitch); stroke-width: 2.3; }
+    .nav-btn.active::before {
+        content: ""; position: absolute; top: 0;
+        width: 24px; height: 3px; border-radius: 0 0 3px 3px; background: var(--ochre);
+    }
+
+    @media (min-width: 768px) {
+        .app-viewport-shell {
+            padding-bottom: 0;
+        }
+
+        .main-workspace {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            align-items: start;
+        }
+
+        .nav-wrapper {
+            position: sticky;
+            top: 0;
+            grid-column: 1;
+            width: 100%;
+            height: calc(100vh - 150px);
+            min-height: 400px;
+            flex-direction: column;
+            justify-content: flex-start;
+            padding: 32px 18px;
+            gap: 8px;
+            background: transparent;
+            border-top: none;
+            border-right: 1px solid var(--line);
+            box-shadow: none;
+            backdrop-filter: none;
+        }
+
+        .nav-btn {
+            width: 100%;
+            height: 50px;
+            flex-direction: row;
+            justify-content: flex-start;
+            padding: 0 16px;
+            gap: 14px;
+            font-size: 0.88rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover { background: #E2E8F0; color: var(--ink); }
+        .nav-btn:hover svg { stroke: var(--ink); }
+
+        .nav-btn.active { background: var(--pitch); color: #FFFFFF; }
+        .nav-btn.active svg { stroke: #FFFFFF; }
+        .nav-btn.active::before { display: none; }
+
+        .filter-wrapper { grid-column: 2; padding: 32px 32px 0 32px; }
+        .filter-container { flex-direction: row; gap: 20px; }
+        .app-container { grid-column: 2; padding: 32px; }
+    }
+
+    @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+</style>
+</head>
+<body>
+
+<div class="app-viewport-shell">
+
+    <!-- HERO PANEL TOPPER -->
+    <div class="brand-hero">
+        <div class="header-row">
+            <div class="brand-profile">
+                <div class="crest">
+                    <img src="{% static 'UG_LOGO.png' %}" alt="County Logo">
+                </div>
+                <div class="brand-title">
+                    <h1>{{ tournament.name }}</h1>
+                    <p>Uasin Gishu County</p>
+                </div>
+            </div>
+            <div class="pill-badge">{{ tournament.season }} Season</div>
+        </div>
+
+        <div class="stage-rail">
+            {% for stage in stage_progress %}
+            <div class="stage-seg {{ stage.status }}">
+                <div class="stage-track {{ stage.status }}"><div class="stage-fill"></div></div>
+                <span class="stage-label">{{ stage.label }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- CORE FLEX WORKSPACE INTERFACE LAYOUT SYSTEM -->
+    <div class="main-workspace">
+
+        <!-- SIDEBAR / BOTTOM ACTION NAVIGATION LINK MATRIX CONTAINER -->
+        <div class="nav-wrapper">
+            <div class="nav-btn active" onclick="routeTo('home', this)">
+                <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                <span>Home</span>
+            </div>
+            <div class="nav-btn" onclick="routeTo('fixtures', this)">
+                <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <span>Fixtures</span>
+            </div>
+            <div class="nav-btn" onclick="routeTo('news', this)">
+                <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                <span>News</span>
+            </div>
+            <div class="nav-btn" onclick="routeTo('team', this)">
+                <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <span>Teams</span>
+            </div>
+        </div>
+
+        <!-- FILTER DOCK -->
+        <div class="filter-wrapper">
+            <form method="get" id="filter-form" class="filter-container">
+                <div class="filter-box">
+                    <label for="sub-county-select">Sub-County Selection</label>
+                    <select id="sub-county-select" name="sub_county" class="filter-select" onchange="document.getElementById('filter-form').submit()">
+                        <option value="">All Sub-Counties</option>
+                        {% for sc in sub_counties %}
+                        <option value="{{ sc.pk }}" {% if sub_county_id == sc.pk|stringformat:"s" %}selected{% endif %}>{{ sc.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-box">
+                    <label for="ward-select">Ward Area Division</label>
+                    <select id="ward-select" name="ward" class="filter-select" onchange="document.getElementById('filter-form').submit()" {% if not sub_county_id %}disabled{% endif %}>
+                        <option value="">All Wards</option>
+                        {% for w in wards %}
+                        <option value="{{ w.pk }}" {% if ward_id == w.pk|stringformat:"s" %}selected{% endif %}>{{ w.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </form>
+        </div>
+
+        <!-- ACTIVE APP PORT VIEW ROUTE CHANNELS -->
+        <div class="app-container">
+
+            <!-- HOME INTERFACE PANEL -->
+            <div id="home" class="view-section active">
+                <div class="section-heading">
+                    Group Standings
+                    <span class="sub">{% if selected_phase %}{{ selected_phase.get_stage_display }}{% else %}No phase selected{% endif %}</span>
+                </div>
+
+                {% for ps in phase_sports %}
+                <div class="sports-card">
+                    <div class="card-top-bar">
+                        <span>{{ ps.sport.name }}</span>
+                        <span>{{ selected_phase.scope_label }}</span>
+                    </div>
+                    <div class="league-table-header">
+                        <div class="col-team">Team</div>
+                        <div class="col-data">P</div>
+                        <div class="col-data">GD</div>
+                        <div class="col-data">PTS</div>
+                    </div>
+                    {% for standing in standings %}
+                        {% if standing.phase_sport_id == ps.pk %}
+                        <div class="league-row">
+                            <div class="team-meta">
+                                <span class="team-pos">{{ forloop.counter }}</span>
+                                <div class="kit-badge">{{ standing.team.name|slice:":2"|upper }}</div>
+                                <span class="team-lbl">{{ standing.team.name }}</span>
+                            </div>
+                            <div class="cell-data">{{ standing.played }}</div>
+                            <div class="cell-data">{{ standing.goal_difference }}</div>
+                            <div class="cell-data bold">{{ standing.points }}</div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                {% empty %}
+                <div class="sports-card empty-state">
+                    <div class="icon"><svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div>
+                    <p>No standings available yet for this phase.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- FIXTURES INTERFACE PANEL -->
+            <div id="fixtures" class="view-section">
+                <div class="section-heading">Match Fixtures <span class="sub">{{ selected_phase.scope_label }}</span></div>
+
+                {% regroup fixtures by phase_sport as fixture_groups %}
+                {% for group in fixture_groups %}
+                <div class="sports-card">
+                    <div class="card-top-bar">
+                        <span>{{ group.grouper.sport.name }}</span>
+                        {% if group.list.0.status == 'live' %}
+                            <span class="live-indicator"><span class="live-dot"></span>Live</span>
+                        {% endif %}
+                    </div>
+                    <div class="match-row">
+                        {% for fixture in group.list %}
+                        <div class="match-line">
+                            <div class="match-team-block">
+                                <div class="kit-badge">{{ fixture.home_team.name|slice:":2"|upper }}</div>
+                                <span class="team-lbl">{{ fixture.home_team.name }}</span>
+                            </div>
+                            {% if fixture.result %}
+                                <span class="score-tile mono">{{ fixture.result.home_score }}</span>
+                            {% else %}
+                                <span class="score-tile mono">–</span>
+                            {% endif %}
+                        </div>
+                        <div class="match-line">
+                            <div class="match-team-block">
+                                <div class="kit-badge">{{ fixture.away_team.name|slice:":2"|upper }}</div>
+                                <span class="team-lbl">{{ fixture.away_team.name }}</span>
+                            </div>
+                            {% if fixture.result %}
+                                <span class="score-tile mono">{{ fixture.result.away_score }}</span>
+                            {% else %}
+                                <span class="score-tile mono">–</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="sports-card empty-state">
+                    <p>No fixtures scheduled yet for this phase.</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- NEWS INTERFACE PANEL -->
+            <div id="news" class="view-section">
+                <div class="section-heading">Latest Media Center</div>
+                {% for post in news_posts %}
+                <div class="sports-card news-card">
+                    <span class="news-tag">{{ post.get_tag_display }}</span>
+                    <h3>{{ post.title }}</h3>
+                    <p>{{ post.body|truncatewords:35 }}</p>
+                    <div class="news-meta">
+                        <span>{{ post.author.get_full_name|default:"County Sports Dept." }}</span>
+                        <span>{{ post.published_at|timesince }} ago</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="sports-card empty-state"><p>No news posted for this scope yet.</p></div>
+                {% endfor %}
+            </div>
+
+            <!-- TEAMS INTERFACE PANEL -->
+            <div id="team" class="view-section">
+                <div class="section-heading">Team Finder Hub</div>
+                <div class="search-shell">
+                    <svg viewBox="0 0 24 24" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    <input type="text" placeholder="Search team profiles, players or custom wards...">
+                </div>
+                <div class="sports-card empty-state">
+                    <div class="icon">
+                        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </div>
+                    <p>Search or select a team above to track individual player metrics and squad lists.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+    function routeTo(screenId, btnElement) {
+        document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        btnElement.classList.add('active');
+    }
+</script>
+</body>
+</html>

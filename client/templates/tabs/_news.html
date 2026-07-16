@@ -1,0 +1,295 @@
+<style>
+    .news-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 14px;
+        padding-top: 12px;
+        border-top: 1px solid var(--line);
+    }
+    .news-action-btn {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 12px;
+        border-radius: 99px;
+        border: none;
+        background: none;
+        color: var(--ink-soft);
+        font-family: 'Inter', sans-serif;
+        font-size: 0.76rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    }
+    .news-action-btn:hover { background: #F1F5F9; color: var(--ink); }
+    .news-action-btn:active { transform: scale(0.94); }
+    .news-action-btn svg {
+        width: 15px; height: 15px;
+        stroke: currentColor;
+        stroke-width: 2.1;
+        fill: none;
+        transition: fill 0.15s ease, stroke 0.15s ease, transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .news-action-btn.like-btn.liked { color: var(--rust); }
+    .news-action-btn.like-btn.liked svg { fill: var(--rust); stroke: var(--rust); }
+    .news-action-btn.like-btn.liked svg { transform: scale(1.15); }
+    .news-action-btn.like-btn.bump svg { animation: likeBump 0.35s ease; }
+    @keyframes likeBump {
+        0% { transform: scale(1); }
+        40% { transform: scale(1.35); }
+        100% { transform: scale(1.15); }
+    }
+
+    /* ===== SCOPE BADGE ===== */
+    .news-scope-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.62rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        padding: 2px 8px;
+        border-radius: 5px;
+        margin-left: 6px;
+    }
+    .news-scope-badge.scope-county {
+        background: #E2E8F0;
+        color: var(--pitch);
+    }
+    .news-scope-badge.scope-subcounty {
+        background: #FDECD8;
+        color: var(--ochre);
+    }
+    .news-scope-badge.scope-ward {
+        background: #FBE0D5;
+        color: var(--rust);
+    }
+
+    .comment-section {
+        display: none;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--line);
+    }
+    .comment-section.open { display: block; }
+
+    .comment-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
+    .comment-row { display: flex; gap: 10px; }
+    .comment-avatar {
+        width: 26px; height: 26px;
+        border-radius: 50%;
+        background: #E9EEF1;
+        color: var(--pitch);
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 0.66rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    .comment-body { flex: 1; }
+    .comment-meta { display: flex; gap: 6px; align-items: baseline; margin-bottom: 2px; }
+    .comment-author { font-size: 0.78rem; font-weight: 700; }
+    .comment-time { font-size: 0.64rem; color: var(--ink-faint); }
+    .comment-text { font-size: 0.8rem; color: var(--ink); line-height: 1.5; }
+    .comment-empty { font-size: 0.78rem; color: var(--ink-faint); padding: 4px 0 10px; }
+
+    .comment-form { display: flex; gap: 8px; }
+    .comment-input {
+        flex: 1;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 9px 12px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.8rem;
+        background: var(--bg);
+        resize: none;
+    }
+    .comment-input:focus { outline: none; border-color: var(--pitch-light); }
+    .comment-submit {
+        border: none;
+        background: var(--pitch);
+        color: #fff;
+        border-radius: 10px;
+        padding: 0 16px;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.78rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        flex-shrink: 0;
+    }
+    .comment-submit:hover { background: var(--pitch-dark); }
+    .comment-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+</style>
+
+{% for post in news_posts %}
+    {% if not limit_rows or forloop.counter <= limit_rows %}
+    <div class="sports-card news-card-inner" data-post-id="{{ post.id }}">
+        <span class="news-tag">{{ post.get_tag_display }}</span>
+        <h3>{{ post.title }}</h3>
+        <p>{{ post.body|truncatewords:35 }}</p>
+        <div class="news-meta">
+            <span>
+                {{ post.author.get_full_name|default:"County Sports Dept." }}
+                {% if post.phase %}
+                    &middot; {{ post.phase.tournament.name }}
+                    {% if post.phase.ward %}
+                        <span class="news-scope-badge scope-ward">Ward &middot; {{ post.phase.ward.name }}</span>
+                    {% elif post.phase.sub_county %}
+                        <span class="news-scope-badge scope-subcounty">Sub-County &middot; {{ post.phase.sub_county.name }}</span>
+                    {% else %}
+                        <span class="news-scope-badge scope-county">{{ post.phase.get_stage_display }}</span>
+                    {% endif %}
+                {% elif post.sub_county %}
+                    <span class="news-scope-badge scope-subcounty">Sub-County-Wide &middot; {{ post.sub_county.name }}</span>
+                {% else %}
+                    <span class="news-scope-badge scope-county">County-Wide</span>
+                {% endif %}
+            </span>
+            <span>{{ post.published_at|timesince }} ago</span>
+        </div>
+
+        <div class="news-actions">
+            <button class="news-action-btn like-btn" onclick="NewsBoard.toggleLike(this, {{ post.id }})">
+                <svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+                <span class="like-count">{{ post.like_count }}</span>
+            </button>
+            <button class="news-action-btn" onclick="NewsBoard.toggleComments(this, {{ post.id }})">
+                <svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                <span>{{ post.comments.all|length }} comment{{ post.comments.all|length|pluralize }}</span>
+            </button>
+        </div>
+
+        <div class="comment-section" id="comments-{{ post.id }}">
+            <div class="comment-list" id="comment-list-{{ post.id }}">
+                {% for comment in post.comments.all %}
+                <div class="comment-row">
+                    <div class="comment-avatar">{{ comment.display_author_name|slice:":2"|upper }}</div>
+                    <div class="comment-body">
+                        <div class="comment-meta">
+                            <span class="comment-author">{{ comment.display_author_name }}</span>
+                            <span class="comment-time">{{ comment.created_at|timesince }} ago</span>
+                        </div>
+                        <div class="comment-text">{{ comment.content }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="comment-empty">No comments yet — be the first.</p>
+                {% endfor %}
+            </div>
+            <div class="comment-form">
+                <textarea class="comment-input" rows="1" placeholder="Add a comment..." id="comment-input-{{ post.id }}"></textarea>
+                <button class="comment-submit" onclick="NewsBoard.submitComment({{ post.id }})">Post</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+{% empty %}
+<div class="sports-card empty-state"><p>No news posted for this scope yet.</p></div>
+{% endfor %}
+
+<script>
+    window.NewsBoard = window.NewsBoard || {
+        likedPosts: new Set(),
+
+        getCookie(name) {
+            const match = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+            return match ? match.pop() : '';
+        },
+
+        async toggleLike(btn, postId) {
+            if (this.likedPosts.has(postId)) return; // one like per session, no unlike endpoint exists
+            this.likedPosts.add(postId);
+            btn.classList.add('liked', 'bump');
+            setTimeout(() => btn.classList.remove('bump'), 350);
+
+            const countEl = btn.querySelector('.like-count');
+            const optimistic = parseInt(countEl.textContent, 10) + 1;
+            countEl.textContent = optimistic;
+
+            try {
+                const res = await fetch(`/api/news/${postId}/like/`, {
+                    method: 'POST',
+                    headers: { 'X-CSRFToken': this.getCookie('csrftoken') }
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    countEl.textContent = data.like_count;
+                } else {
+                    countEl.textContent = optimistic - 1;
+                    btn.classList.remove('liked');
+                    this.likedPosts.delete(postId);
+                }
+            } catch (e) {
+                countEl.textContent = optimistic - 1;
+                btn.classList.remove('liked');
+                this.likedPosts.delete(postId);
+            }
+        },
+
+        toggleComments(btn, postId) {
+            const section = document.getElementById('comments-' + postId);
+            section.classList.toggle('open');
+        },
+
+        async submitComment(postId) {
+            const input = document.getElementById('comment-input-' + postId);
+            const content = input.value.trim();
+            if (!content) return;
+
+            const submitBtn = input.nextElementSibling;
+            submitBtn.disabled = true;
+
+            try {
+                const res = await fetch(`/api/news/${postId}/comment/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': this.getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ content })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    const list = document.getElementById('comment-list-' + postId);
+                    const emptyMsg = list.querySelector('.comment-empty');
+                    if (emptyMsg) emptyMsg.remove();
+
+                    const row = document.createElement('div');
+                    row.className = 'comment-row';
+                    row.innerHTML = `
+                        <div class="comment-avatar">${data.comment.author.slice(0, 2).toUpperCase()}</div>
+                        <div class="comment-body">
+                            <div class="comment-meta">
+                                <span class="comment-author">${this._escape(data.comment.author)}</span>
+                                <span class="comment-time">just now</span>
+                            </div>
+                            <div class="comment-text">${this._escape(data.comment.content)}</div>
+                        </div>`;
+                    list.appendChild(row);
+                    input.value = '';
+
+                    const countSpan = document.querySelector(`[data-post-id="${postId}"] .news-actions button:last-of-type span:last-child`);
+                    if (countSpan) {
+                        const n = list.querySelectorAll('.comment-row').length;
+                        countSpan.textContent = `${n} comment${n !== 1 ? 's' : ''}`;
+                    }
+                } else {
+                    alert(data.message || 'Could not post comment.');
+                }
+            } finally {
+                submitBtn.disabled = false;
+            }
+        },
+
+        _escape(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+    };
+</script>

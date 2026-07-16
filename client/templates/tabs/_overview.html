@@ -1,0 +1,80 @@
+<!-- STATS ROW -->
+<div class="t-stats-row">
+    <div class="t-stat-card">
+        <div class="num" data-count="{{ teams|length }}">0</div>
+        <div class="lbl">Teams</div>
+    </div>
+    <div class="t-stat-card">
+        <div class="num" data-count="{{ live_count }}">0</div>
+        <div class="lbl">Live now</div>
+    </div>
+    <div class="t-stat-card">
+        <div class="num" data-count="{{ news_count }}">0</div>
+        <div class="lbl">News</div>
+    </div>
+</div>
+
+<!-- NEXT MATCH -->
+<div class="t-section-heading">Next Match</div>
+<div class="sports-card">
+    {% if next_fixture %}
+        <div class="card-top-bar">
+            <span>{{ next_fixture.venue|default:"Venue TBC" }}</span>
+            {% if next_fixture.status == 'live' %}
+                <span class="live-indicator"><span class="live-dot"></span>Live</span>
+            {% else %}
+                <span class="kickoff-badge">{{ next_fixture.kickoff_at|date:"D, d M · H:i"|default:"Not scheduled" }}</span>
+            {% endif %}
+        </div>
+        <div class="match-row">
+            <div class="match-line">
+                <div class="match-team-block">
+                    <div class="kit-badge">{{ next_fixture.home_team.name|slice:":2"|upper }}</div>
+                    <span class="team-lbl">{{ next_fixture.home_team.name }}</span>
+                </div>
+                <span class="score-tile mono">{% if next_fixture.result %}{{ next_fixture.result.home_score }}{% else %}–{% endif %}</span>
+            </div>
+            <div class="match-line">
+                <div class="match-team-block">
+                    <div class="kit-badge">{{ next_fixture.away_team.name|slice:":2"|upper }}</div>
+                    <span class="team-lbl">{{ next_fixture.away_team.name }}</span>
+                </div>
+                <span class="score-tile mono">{% if next_fixture.result %}{{ next_fixture.result.away_score }}{% else %}–{% endif %}</span>
+            </div>
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="icon">
+                <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <p>No fixture scheduled yet for this phase.</p>
+        </div>
+    {% endif %}
+</div>
+<button class="t-btn-outline" data-jump="matches">
+    View all matches
+    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+</button>
+
+<!-- TOP SCORERS -->
+<div class="t-section-heading">Top Scorers</div>
+<div class="sports-card">
+    {% for player in players|slice:":3" %}
+    <div class="scorer-row">
+        <span class="scorer-rank">{{ forloop.counter }}</span>
+        <div style="flex:1;">
+            <div class="scorer-name">{{ player.name }}</div>
+            <div class="scorer-team">{{ player.team.name }}</div>
+        </div>
+        <span class="scorer-goals">{{ player.goals }}</span>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <p>No player stats available yet.</p>
+    </div>
+    {% endfor %}
+</div>
+<button class="t-btn-outline" data-jump="player-stats">
+    View all players
+    <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+</button>

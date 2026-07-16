@@ -1,0 +1,121 @@
+{% extends "subcounty/subcountyadmin_base.html" %}
+{% block title %}Tournaments | {{ sub_county.name }} Sub-County{% endblock %}
+{% block page_eyebrow %}{{ sub_county.name }} Sub-County{% endblock %}
+{% block page_title %}Tournaments Oversight{% endblock %}
+
+{% block header_actions %}
+<button type="button" class="btn-primary" onclick="toggleFormPanel('new-tournament-panel')">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    New Tournament
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="inline-form-panel {% if open_form_panel %}active{% endif %}" id="new-tournament-panel">
+    <div class="form-panel-title">Create Tournament</div>
+    {% if form.non_field_errors %}
+    <div style="color:var(--rust); font-size:0.82rem; margin-bottom:12px;">{{ form.non_field_errors }}</div>
+{% endif %}
+<form method="post" action="{% url 'tournament_desk' %}">
+    {% csrf_token %}
+    <div class="form-grid-columns">
+        <div class="form-field-box">
+            <label>Name</label>{{ form.name }}
+            {{ form.name.errors }}
+        </div>
+        <div class="form-field-box">
+            <label>Season</label>{{ form.season }}
+            {{ form.season.errors }}
+        </div>
+        <div class="form-field-box">
+            <label>Status</label>{{ form.status }}
+            {{ form.status.errors }}
+        </div>
+        <div class="form-field-box">
+            <label>Ward</label>{{ form.ward }}
+            {{ form.ward.errors }}
+        </div>
+        <div class="form-field-box"><label>Start Date</label>{{ form.start_date }}{{ form.start_date.errors }}</div>
+        <div class="form-field-box"><label>End Date</label>{{ form.end_date }}{{ form.end_date.errors }}</div>
+    </div>
+
+    <p class="cell-sub" style="margin:-8px 0 16px;">
+        Leave Sub County and Ward blank for a countywide tournament.
+    </p>
+
+    <div class="form-field-box" style="margin-bottom:16px;">
+        <label>Sports</label>
+        <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:4px;">
+            {% for checkbox in form.sports %}
+            <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:500;">
+                {{ checkbox.tag }} {{ checkbox.choice_label }}
+            </label>
+            {% endfor %}
+        </div>
+        {{ form.sports.errors }}
+    </div>
+
+    <div class="form-actions">
+        <button type="button" class="btn-ghost" onclick="toggleFormPanel('new-tournament-panel')">Cancel</button>
+        <button type="submit" class="btn-primary">Create Tournament</button>
+    </div>
+</form>
+
+{{ wards_json|json_script:"wards-data" }}
+</div>
+<!-- Metrics Panel -->
+<div class="metrics-grid">
+    <div class="metric-card">
+        <h3>Active Ward Phases</h3>
+        <p>{{ active_ward_phases }}<span>running in your wards</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Active Sub-County Phases</h3>
+        <p>{{ active_subcounty_phases }}<span>regional playoffs</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Managed Wards</h3>
+        <p>{{ total_wards_count }}<span>under your jurisdiction</span></p>
+    </div>
+</div>
+
+<!-- Index Header with Search Bar -->
+<div class="group-header-row" style="margin-top:28px;">
+    <h3 class="group-header">Assigned Tournaments</h3>
+    <form method="get" action="{% url 'subcounty_tournament' %}" class="search-form">
+        <input type="text" name="search" value="{{ search_query }}" placeholder="Search tournaments..." class="form-input-inline">
+    </form>
+</div>
+
+<!-- Tournaments List -->
+<div class="group">
+    {% for tournament in tournaments %}
+    <div class="group-row" onclick="window.location.href='{% url 'subcounty_tournament_detail' tournament.id %}'" style="cursor:pointer;">
+        <div class="row-left">
+            <div class="avatar-chip uppercase">{{ tournament.name|slice:":2" }}</div>
+            <div>
+                <div class="cell-main">{{ tournament.name }}</div>
+                <div class="cell-sub">
+                    Season {{ tournament.season }} &middot;
+                    {% if tournament.start_date %}{{ tournament.start_date|date:"M Y" }}{% else %}TBD{% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="row-right">
+            {% if tournament.status == 'ongoing' %}
+                <span class="badge live"><span class="live-dot"></span>Ongoing</span>
+            {% elif tournament.status == 'upcoming' %}
+                <span class="badge pending">Upcoming</span>
+            {% else %}
+                <span class="badge success">Completed</span>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <p>No active or mapped tournaments found for {{ sub_county.name }} Sub-County.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

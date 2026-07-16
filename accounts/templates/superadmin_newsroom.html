@@ -1,0 +1,236 @@
+{% extends "superadmin_base.html" %}
+
+{% block title %}Newsroom – UG Sports Admin{% endblock %}
+{% block page_eyebrow %}Media Center{% endblock %}
+{% block page_title %}Newsroom{% endblock %}
+
+{% block header_actions %}
+<button class="btn-primary" onclick="toggleFormPanel('news-form-panel')">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><path d="M12 5v14M5 12h14"/></svg>
+    New Post
+</button>
+{% endblock %}
+
+{% block content %}
+
+<!-- ============= NEW POST INLINE FORM ============= -->
+<div class="inline-form-panel" id="news-form-panel" style="display: none;">
+    <div class="form-panel-title" id="news-form-title">Publish New Post</div>
+    <form method="post" action="{% url 'news_create' %}" id="news-form">
+        {% csrf_token %}
+        <input type="hidden" name="post_id" id="news-id-field">
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label>Headline</label>
+                <input type="text" name="title" id="news-title-field" placeholder="e.g. Tournament kits distributed to all wards" required>
+            </div>
+            <div class="form-field-box">
+                <label>Tag</label>
+                <select name="tag" id="news-tag-field" required>
+                    <option value="announcement">Official Announcement</option>
+                    <option value="match_report">Match Report</option>
+                    <option value="fixture_update">Fixture Update</option>
+                    <option value="general">General</option>
+                </select>
+            </div>
+            <div class="form-field-box">
+                <label>Phase Scope (optional)</label>
+                <select name="phase" id="news-phase-field">
+                    <option value="">County-Wide (All Phases)</option>
+                    {% for phase in phases %}
+                        <option value="{{ phase.id }}">{{ phase.tournament.name }} - {{ phase.scope_label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="form-grid-columns" style="grid-template-columns: 1fr;">
+            <div class="form-field-box">
+                <label>Body</label>
+                <textarea name="body" id="news-body-field" rows="4" placeholder="Write the full story here..." required style="resize: vertical; font-family: inherit;"></textarea>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="button" class="btn-ghost" onclick="toggleFormPanel('news-form-panel')">Cancel</button>
+            <button type="submit" class="btn-primary" id="news-form-submit">Publish Post</button>
+        </div>
+    </form>
+</div>
+
+<!-- ============= SEARCH + FILTERS ============= -->
+<div class="search-shell">
+    <svg viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="news-search-input" placeholder="Search posts..." onkeyup="filterNewsPosts()">
+</div>
+
+<div class="filter-pills" id="news-tag-pills">
+    <button type="button" class="filter-pill active" data-tag="all" onclick="setTagFilter('all', this)">All Posts</button>
+    <button type="button" class="filter-pill" data-tag="announcement" onclick="setTagFilter('announcement', this)">Announcements</button>
+    <button type="button" class="filter-pill" data-tag="match_report" onclick="setTagFilter('match_report', this)">Match Reports</button>
+    <button type="button" class="filter-pill" data-tag="fixture_update" onclick="setTagFilter('fixture_update', this)">Fixture Updates</button>
+    <button type="button" class="filter-pill" data-tag="general" onclick="setTagFilter('general', this)">General</button>
+</div>
+
+<!-- ============= POSTS GRID ============= -->
+<div class="group-header-row">
+    <h3 class="group-header">Published Posts</h3>
+    <span class="cell-sub">{{ posts|length }} post{{ posts|length|pluralize }}</span>
+</div>
+
+<div id="news-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+    {% for post in posts %}
+    <div class="group news-card" data-tag="{{ post.tag }}" data-search="{{ post.title|lower }} {{ post.body|lower }}">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="news-tag">{{ post.get_tag_display }}</span>
+            <div class="row-right">
+                <button class="icon-btn" title="Edit" onclick="editPost(this)"
+                        data-edit-url="{% url 'news_edit' post.pk %}"
+                        data-title="{{ post.title|escapejs }}"
+                        data-tag-value="{{ post.tag }}"
+                        data-body="{{ post.body|escapejs }}"
+                        data-subcounty-id="{{ post.sub_county_id|default:'' }}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                </button>
+                <form method="post" action="{% url 'news_delete' post.pk %}" style="display: inline;" onsubmit="return confirm('Delete this post? This cannot be undone.');">
+                    {% csrf_token %}
+                    <button type="submit" class="icon-btn danger" title="Delete">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+        <h3 style="margin: 12px 0 8px 0;">{{ post.title }}</h3>
+        <p style="margin-bottom: 12px; color: var(--text-muted);">{{ post.body|truncatewords:28 }}</p>
+
+       <div class="news-meta" style="font-size: 0.85rem; color: #666; margin-top: auto; display: flex; flex-direction: column; gap: 4px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+    <span>
+        By {{ post.author.get_full_name|default:"County Sports Dept." }} •
+        {% if post.phase %}
+            {{ post.phase.tournament.name }} ({{ post.phase.scope_label }})
+        {% else %}
+            County-Wide
+        {% endif %}
+    </span>
+    <span>{{ post.published_at|timesince }} ago</span>
+</div>
+
+        <!-- Admin Stats Display & Comment Management -->
+        <div class="news-stats" style="display: flex; gap: 16px; margin-top: 12px; font-size: 0.85rem; color: #555; align-items: center;">
+            <span style="display: flex; align-items: center; gap: 6px;" title="Total Likes">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                {{ post.like_count }} Likes
+            </span>
+            <button type="button" class="btn-ghost" style="padding: 4px 8px; font-size: 0.85rem; display: flex; align-items: center; gap: 6px;" onclick="toggleAdminComments('admin-comments-{{ post.pk }}')">
+                <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                {{ post.comments.count }} Comments
+            </button>
+        </div>
+
+        <!-- Admin Comments List -->
+        <div id="admin-comments-{{ post.pk }}" style="display: none; margin-top: 16px; padding-top: 12px; border-top: 1px dashed var(--border);">
+            <div style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px;">
+                {% for comment in post.comments.all %}
+                <div style="background: var(--bg-alt, #f9fafb); padding: 8px 12px; border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+                        <div style="font-weight: 600; color: var(--text-main); font-size: 0.85rem;">
+                            {{ comment.display_author_name }}
+                            <span style="font-weight: normal; color: #888; font-size: 0.75rem; margin-left: 6px;">{{ comment.created_at|date:"M d, H:i" }}</span>
+                        </div>
+                        <form method="post" action="{% url 'news_comment_delete' comment.pk %}" style="margin: 0;" onsubmit="return confirm('Delete this comment permanently?');">
+                            {% csrf_token %}
+                            <button type="submit" style="background: none; border: none; color: #e02424; cursor: pointer; padding: 2px;" title="Delete Comment">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                            </button>
+                        </form>
+                    </div>
+                    <div style="color: var(--text-main); font-size: 0.85rem; line-height: 1.4;">{{ comment.content }}</div>
+                </div>
+                {% empty %}
+                <p style="font-size: 0.85rem; color: #888; text-align: center; margin: 0;">No comments yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="group" style="grid-column: 1 / -1;">
+        <div class="empty-state">
+            <div class="icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </div>
+            <p>No posts published yet.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if is_paginated %}
+<div style="display: flex; justify-content: center; gap: 8px; margin-top: 20px;">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="btn-ghost">Previous</a>
+    {% endif %}
+    <span class="cell-sub" style="align-self: center;">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="btn-ghost">Next</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function toggleFormPanel(panelId) {
+        const panel = document.getElementById(panelId);
+        if (panel.style.display === 'none' || panel.classList.contains('hidden')) {
+            panel.style.display = 'block';
+            document.getElementById('news-form').action = "{% url 'news_create' %}";
+            document.getElementById('news-form-title').innerText = 'Publish New Post';
+            document.getElementById('news-title-field').value = '';
+            document.getElementById('news-tag-field').value = 'announcement';
+            document.getElementById('news-phase-field').value = '';  // <-- UPDATED HERE
+            document.getElementById('news-body-field').value = '';
+            document.getElementById('news-form-submit').innerText = 'Publish Post';
+        } else {
+            panel.style.display = 'none';
+        }
+    }
+
+    function toggleAdminComments(sectionId) {
+        const el = document.getElementById(sectionId);
+        el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+    }
+
+    function setTagFilter(tag, btnElement) {
+        document.querySelectorAll('#news-tag-pills .filter-pill').forEach(p => p.classList.remove('active'));
+        btnElement.classList.add('active');
+        applyNewsFilters();
+    }
+
+    function filterNewsPosts() {
+        applyNewsFilters();
+    }
+
+    function applyNewsFilters() {
+        const query = document.getElementById('news-search-input').value.toLowerCase();
+        const activeTag = document.querySelector('#news-tag-pills .filter-pill.active').dataset.tag;
+
+        document.querySelectorAll('#news-grid > .news-card').forEach(card => {
+            const matchesSearch = card.dataset.search.includes(query);
+            const matchesTag = activeTag === 'all' || card.dataset.tag === activeTag;
+            card.style.display = (matchesSearch && matchesTag) ? 'block' : 'none';
+        });
+    }
+
+    function editPost(btn) {
+        document.getElementById('news-form-title').innerText = 'Edit Post';
+        document.getElementById('news-form').action = btn.dataset.editUrl;
+        document.getElementById('news-title-field').value = btn.dataset.title;
+        document.getElementById('news-tag-field').value = btn.dataset.tagValue;
+        document.getElementById('news-body-field').value = btn.dataset.body;
+        document.getElementById('news-phase-field').value = btn.dataset.phaseId; // <-- UPDATED HERE
+        document.getElementById('news-form-submit').innerText = 'Save Changes';
+        const panel = document.getElementById('news-form-panel');
+        panel.style.display = 'block';
+        panel.scrollIntoView({ behavior: 'smooth' });
+    }
+</script>
+{% endblock %}

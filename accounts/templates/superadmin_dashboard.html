@@ -1,0 +1,112 @@
+{% extends "superadmin_base.html" %}
+
+{% block title %}Dashboard — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}County-Wide Overview{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<div class="metrics-grid">
+    <div class="metric-card">
+        <h3>Active Tournaments</h3>
+        <p>{{ active_tournaments_count }}<span>of {{ total_tournaments_count }} total</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Registered Teams</h3>
+        <p>{{ team_count }}<span>across {{ sport_count }} sports</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Registered Players</h3>
+        <p>{{ player_count }}<span>this season</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Results Awaiting Verify</h3>
+        <p>{{ pending_results_count }}<span>pending</span></p>
+    </div>
+</div>
+
+<!-- ============= TOURNAMENT STAGE BREAKDOWN ============= -->
+<div class="group-header-row">
+    <h3 class="group-header">Tournaments by Stage</h3>
+    <a href="{% url 'tournament_desk' %}" class="btn-ghost">View Tournament Desk</a>
+</div>
+<div class="group">
+    {% for stage in stage_breakdown %}
+    <div class="group-row">
+        <div class="row-left">
+            <div class="avatar-chip">{{ stage.code|slice:":2"|upper }}</div>
+            <div>
+                <div class="cell-main">{{ stage.label }}</div>
+                <div class="cell-sub">{{ stage.tournament_count }} tournament{{ stage.tournament_count|pluralize }}</div>
+            </div>
+        </div>
+        <div class="row-right">
+            {% if stage.ongoing_count %}
+            <span class="badge live"><span class="live-dot"></span>{{ stage.ongoing_count }} live</span>
+            {% else %}
+            <span class="badge pending">None live</span>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <div class="icon">
+            <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+            </svg>
+        </div>
+        <p>No tournaments have been created yet. Start with a county-level tournament and add ward or sub-county stages under it.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- ============= GEOGRAPHIC COVERAGE ============= -->
+<div class="group-header-row"><h3 class="group-header">Geographic Coverage</h3></div>
+<div class="metrics-grid" style="margin-bottom: 8px;">
+    <div class="metric-card">
+        <h3>Sub-Counties Onboarded</h3>
+        <p>{{ sub_county_count }}<span>regions</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Wards Onboarded</h3>
+        <p>{{ ward_count }}<span>regions</span></p>
+    </div>
+    <div class="metric-card">
+        <h3>Ward / Sub-County Admins</h3>
+        <p>{{ staff_count }}<span>accounts</span></p>
+    </div>
+</div>
+
+<!-- ============= RECENT AUDIT ACTIVITY ============= -->
+<div class="group-header-row">
+    <h3 class="group-header">Recent Audit Activity</h3>
+    <a href="{% url 'audit_log' %}" class="btn-ghost">View Full Log</a>
+</div>
+<div class="group">
+    {% for entry in recent_audit_logs %}
+    <div class="group-row">
+        <div class="row-left">
+            <div class="avatar-chip">{{ entry.user.first_name|slice:":1"|default:"S" }}{{ entry.user.last_name|slice:":1" }}</div>
+            <div>
+                <div class="cell-main">
+                    {{ entry.user.get_full_name|default:"System" }}
+                    <span style="color: var(--ink-soft); font-weight: 500;">{{ entry.get_action_display|lower }}d</span>
+                    {{ entry.object_repr }}
+                </div>
+                <div class="cell-sub">{{ entry.user.scope_label|default:"County-wide" }} · {{ entry.timestamp|timesince }} ago</div>
+            </div>
+        </div>
+        {% if entry.action == 'verify' %}
+        <span class="badge success">Verified</span>
+        {% elif entry.action == 'generate_fixtures' %}
+        <span class="badge pending">Fixtures</span>
+        {% endif %}
+    </div>
+    {% empty %}
+    <div class="empty-state">
+        <p>No activity recorded yet. Actions taken across the system — staff provisioning, team registration, fixture generation, result verification — will show up here.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

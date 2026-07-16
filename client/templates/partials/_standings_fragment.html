@@ -1,0 +1,35 @@
+{% for ps in phase_sports %}
+<div class="sports-card">
+    <div class="card-top-bar">
+        <span>{{ ps.sport.name }}</span>
+        <span>{{ selected_phase.scope_label }}</span>
+    </div>
+    <div class="league-table-header">
+        <div class="col-team">Team</div>
+        <div class="col-data">P</div>
+        <div class="col-data">GD</div>
+        <div class="col-data">PTS</div>
+    </div>
+    {% for standing in standings %}
+        {% if standing.phase_sport_id == ps.pk %}
+        <div class="league-row">
+            <div class="team-meta">
+                <span class="team-pos">{{ forloop.counter }}</span>
+                <div class="kit-badge">{{ standing.team.name|slice:":2"|upper }}</div>
+                <span class="team-lbl">{{ standing.team.name }}</span>
+            </div>
+            <div class="cell-data">{{ standing.played }}</div>
+            <div class="cell-data">{{ standing.goal_difference }}</div>
+            <div class="cell-data bold">{{ standing.points }}</div>
+        </div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% empty %}
+<div class="sports-card empty-state">
+    <div class="icon">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+    </div>
+    <p>No standings available yet for this phase.</p>
+</div>
+{% endfor %}
