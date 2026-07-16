@@ -69,7 +69,7 @@ urlpatterns = [
     path('ward/phase-sports/<int:pk>/next-round/', views.WardNextRoundBuilderView, name='ward_next_round_builder'),
 
     path('ward/newsroom/', views.ward_newsroom, name='ward_newsroom'),
-    path('ward/news/create/', views.news_create, name='news_create'),
+    path('ward/news/create/', views.news_create, name='ward_news_create'),
     path('ward/news/<int:pk>/edit/', views.news_edit, name='news_edit'),
     path('ward/news/<int:pk>/delete/', views.news_delete, name='news_delete'),
     path('ward/comment/<int:pk>/delete/', views.news_comment_delete, name='news_comment_delete'),
