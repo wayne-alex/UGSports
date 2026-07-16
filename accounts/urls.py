@@ -70,8 +70,8 @@ urlpatterns = [
 
     path('ward/newsroom/', views.ward_newsroom, name='ward_newsroom'),
     path('ward/news/create/', views.news_create, name='ward_news_create'),
-    path('ward/news/<int:pk>/edit/', views.news_edit, name='news_edit'),
-    path('ward/news/<int:pk>/delete/', views.news_delete, name='news_delete'),
+    path('ward/news/<int:pk>/edit/', views.news_edit, name='ward_news_edit'),
+    path('ward/news/<int:pk>/delete/', views.news_delete, name='ward_news_delete'),
     path('ward/comment/<int:pk>/delete/', views.news_comment_delete, name='news_comment_delete'),
     #     Sub County
     path('subcounty/dashboard/', views.subcounty_dashboard, name='subcounty_dashboard'),

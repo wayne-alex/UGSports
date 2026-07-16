@@ -198,7 +198,7 @@
                 <!-- Authority check to edit/delete -->
                 {% if post.author == request.user or post.phase.ward == ward %}
                     <button class="icon-btn" title="Edit Local Post" onclick="editPost(this)"
-                            data-edit-url="{% url 'news_edit' post.pk %}"
+                            data-edit-url="{% url 'ward_news_edit' post.pk %}"
                             data-title="{{ post.title|escapejs }}"
                             data-tag-value="{{ post.tag }}"
                             data-body="{{ post.body|escapejs }}"
@@ -309,7 +309,7 @@
         const panel = document.getElementById(panelId);
         if (panel.style.display === 'none' || panel.classList.contains('hidden')) {
             panel.style.display = 'block';
-            document.getElementById('news-form').action = "{% url 'news_create' %}";
+            document.getElementById('news-form').action = "{% url 'ward_news_create' %}";
             document.getElementById('news-form-title').innerText = 'Publish Local News Post';
             document.getElementById('news-id-field').value = '';
             document.getElementById('news-title-field').value = '';
