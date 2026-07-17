@@ -1,3 +1,5 @@
+import re
+
 from django.conf import settings
 from django.contrib.auth.models import AbstractUser
 from django.contrib.contenttypes.fields import GenericForeignKey
@@ -137,6 +139,40 @@ class Tournament(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.season})"
+
+    @property
+    def crest_code(self):
+        """
+        Short crest initials from the tournament name.
+        "Governors Cup" / "Governor's Cup" -> "GC"
+        "Turbo Ward Championship" -> "TWC"
+        "Copa" (single word) -> "CO"
+        """
+        if not self.name:
+            return ""
+        # drop a trailing possessive so "Governor's" doesn't leave a stray letter
+        cleaned = re.sub(r"['\u2019]s\b", "", self.name)
+        words = re.findall(r"[A-Za-z0-9]+", cleaned)
+        if not words:
+            return ""
+        if len(words) == 1:
+            return words[0][:2].upper()
+        return "".join(w[0] for w in words)[:3].upper()
+
+    @property
+    def crest_year(self):
+        """
+        Last two digits of the season year.
+        "2026" -> "26"
+        "2025/2026" -> "26"
+        """
+        if not self.season:
+            return ""
+        years = re.findall(r"\d{4}", str(self.season))
+        if years:
+            return years[-1][-2:]
+        digits = re.findall(r"\d+", str(self.season))
+        return digits[-1][-2:].zfill(2) if digits else ""
 
 
 class Phase(models.Model):

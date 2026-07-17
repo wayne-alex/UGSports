@@ -3,26 +3,33 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0C2417">
     <title>UG Sports - Lobby</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="manifest" href="{% static 'manifest.json' %}">
-    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap"
           rel="stylesheet">
 
     <style>
         :root {
             --pitch: #1B4332;
             --pitch-dark: #0C2417;
+            --pitch-light: #2D6A4F;
             --ochre: #D98A3D;
+            --ochre-soft: #F4E3CC;
             --rust: #C1440E;
-            --bg: #F8FAFC;
+            --bg: #F5F6F1;
             --card: #FFFFFF;
             --ink: #0F172A;
             --ink-soft: #64748B;
-            --line: #E2E8F0;
-            --header-h: 64px;
+            --ink-faint: #94A3B8;
+            --line: #E7EAE4;
+            --header-h: 56px;
+            --nav-h: 62px;
+            --sat: env(safe-area-inset-top, 0px);
+            --sab: env(safe-area-inset-bottom, 0px);
         }
 
         * {
@@ -30,6 +37,10 @@
             padding: 0;
             box-sizing: border-box;
             -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            overscroll-behavior-y: contain;
         }
 
         body {
@@ -44,19 +55,32 @@
             font-family: 'Space Grotesk', sans-serif;
         }
 
-        /* ===== FIXED HEADER ===== */
+        button, [role="button"] {
+            font-family: inherit;
+        }
+
+        /* ===== FIXED HEADER (safe-area aware) ===== */
         .header {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            height: var(--header-h);
-            background: var(--pitch);
-            padding: 0 24px;
+            height: calc(var(--header-h) + var(--sat));
+            padding-top: var(--sat);
+            padding-left: 20px;
+            padding-right: 20px;
+            background: var(--pitch-dark);
             color: #fff;
             z-index: 200;
             display: flex;
             align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0);
+            transition: box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+
+        .header.scrolled {
+            box-shadow: 0 12px 24px rgba(12, 36, 23, 0.22);
+            border-bottom-color: rgba(255, 255, 255, 0.07);
         }
 
         .header-row {
@@ -71,37 +95,56 @@
         .brand {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 11px;
         }
 
         .crest {
-            width: 38px;
-            height: 38px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            background: rgba(217, 138, 61, 0.14);
+            border: 1px solid rgba(217, 138, 61, 0.3);
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         .crest img {
-            width: 24px;
-            height: 24px;
+            width: 21px;
+            height: 21px;
             object-fit: contain;
         }
 
         .brand-title h1 {
-            font-size: 1.02rem;
+            font-size: 0.95rem;
             font-weight: 700;
+            letter-spacing: 0.1px;
+            line-height: 1.1;
         }
 
         .brand-title p {
-            font-size: 0.62rem;
+            font-size: 0.6rem;
             color: var(--ochre);
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 1.2px;
-            margin-top: 1px;
+            letter-spacing: 1.3px;
+            margin-top: 2px;
+        }
+
+        .live-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(193, 68, 14, 0.18);
+            border: 1px solid rgba(193, 68, 14, 0.35);
+            padding: 5px 10px 5px 8px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #FF9A73;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
         }
 
         /* ===== LAYOUT ===== */
@@ -110,8 +153,8 @@
             margin: 0 auto;
             display: flex;
             flex-direction: column;
-            padding-top: var(--header-h);
-            padding-bottom: 84px;
+            padding-top: calc(var(--header-h) + var(--sat));
+            padding-bottom: calc(var(--nav-h) + var(--sab) + 20px);
         }
 
         .content-col {
@@ -119,232 +162,181 @@
             flex-direction: column;
         }
 
-        /* ===== TABS ===== */
-        .tabs {
-            display: flex;
-            gap: 8px;
-            padding: 20px 24px 0 24px;
-            border-bottom: 1px solid var(--line);
+        /* ===== TITLE AREA (Optimized for Mobile) ===== */
+        .page-intro {
+            padding: 16px 20px 2px 20px;
         }
 
-        .tab {
-            padding: 8px 16px;
-            font-size: 0.85rem;
-            font-weight: 600;
+        .page-intro h2 {
+            font-size: 1.25rem; /* Scaled down on mobile to fit beautifully */
+            font-weight: 700;
+            letter-spacing: -0.4px;
+        }
+
+        .page-intro p {
+            font-size: 0.75rem;
             color: var(--ink-soft);
-            cursor: pointer;
-            border-radius: 8px 8px 0 0;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
+            margin-top: 1px;
         }
 
-        .tab:hover {
-            color: var(--ink);
-        }
-
-        .tab.active {
-            color: var(--pitch);
-            border-bottom-color: var(--pitch);
-        }
-
-        /* ===== FILTERS / CUSTOM DROPDOWNS ===== */
+        /* ===== COMPRESSED CHIP FILTERS (Optimized for Mobile) ===== */
         .filters {
             display: flex;
-            gap: 12px;
-            padding: 16px 24px 0 24px;
-            flex-wrap: wrap;
+            flex-direction: column;
+            gap: 8px; /* Tightened stack height */
+            padding: 10px 0 2px 0;
+            margin: 0 20px;
         }
 
-        .filter-box {
-            flex: 1;
-            min-width: 180px;
-            max-width: 260px;
-            position: relative;
-        }
-
-        .filter-box label {
-            display: block;
-            font-size: 0.65rem;
+        .chip-group-label {
+            font-size: 0.58rem; /* Ultra-crisp secondary text */
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
-            color: var(--ink-soft);
-            margin-bottom: 5px;
+            letter-spacing: 0.7px;
+            color: var(--ink-faint);
+            margin-bottom: 4px;
+            display: block;
         }
 
-        .select {
-            position: relative;
-        }
-
-        .select-trigger {
-            width: 100%;
+        .chip-row {
             display: flex;
-            align-items: center;
-            justify-content: space-between;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 2px 2px 6px 2px;
+            margin: 0 -2px;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .chip-row::-webkit-scrollbar {
+            display: none;
+        }
+
+        .chip {
+            flex: 0 0 auto;
+            padding: 6px 12px; /* Slimmer, high-density touch target */
+            border-radius: 20px;
             background: var(--card);
             border: 1px solid var(--line);
-            border-radius: 8px;
-            padding: 10px 12px 10px 14px;
-            font-family: 'Inter', sans-serif;
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             font-weight: 600;
-            color: var(--ink);
+            color: var(--ink-soft);
             cursor: pointer;
-            text-align: left;
+            white-space: nowrap;
+            transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+            user-select: none;
         }
 
-        .select-trigger:hover {
-            border-color: #CBD5E1;
-        }
-
-        .select.open .select-trigger {
+        .chip.active {
+            background: var(--pitch);
             border-color: var(--pitch);
-            box-shadow: 0 0 0 3px rgba(27, 67, 50, 0.08);
+            color: #fff;
         }
 
-        .select-trigger .chevron {
-            width: 15px;
-            height: 15px;
-            stroke: var(--ink-soft);
-            stroke-width: 2.5;
-            fill: none;
-            transition: transform 0.15s ease;
-            flex-shrink: 0;
-            margin-left: 8px;
-        }
-
-        .select.open .chevron {
-            transform: rotate(180deg);
-        }
-
-        .select-menu {
-            position: absolute;
-            top: calc(100% + 6px);
-            left: 0;
-            right: 0;
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 10px;
-            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
-            padding: 6px;
-            z-index: 50;
-            opacity: 0;
-            visibility: hidden;
-            transform: translateY(-4px);
-            transition: opacity 0.14s ease, transform 0.14s ease, visibility 0.14s;
-            max-height: 260px;
-            overflow-y: auto;
-        }
-
-        .select.open .select-menu {
-            opacity: 1;
-            visibility: visible;
-            transform: translateY(0);
-        }
-
-        .select-option {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 9px 10px;
-            font-size: 0.83rem;
-            font-weight: 500;
-            color: var(--ink);
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .select-option:hover {
-            background: #F1F5F9;
-        }
-
-        .select-option.selected {
-            font-weight: 700;
-            color: var(--pitch);
-        }
-
-        .select-option .check {
-            width: 14px;
-            height: 14px;
-            stroke: var(--pitch);
-            stroke-width: 2.6;
-            fill: none;
-            opacity: 0;
-        }
-
-        .select-option.selected .check {
-            opacity: 1;
+        .chip:active {
+            transform: scale(0.94);
         }
 
         /* ===== MAIN CONTENT ===== */
         .main-content {
-            padding: 20px 24px;
+            padding: 12px 20px 0 20px;
         }
 
         .view {
             display: none;
+            animation: viewIn 0.22s ease;
         }
 
         .view.active {
             display: block;
         }
 
+        @keyframes viewIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .section-heading {
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 700;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: baseline;
         }
 
         .section-heading .sub {
-            font-size: 0.68rem;
+            font-size: 0.66rem;
             font-weight: 600;
-            color: var(--ink-soft);
+            color: var(--ink-faint);
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
         }
 
         /* ===== TOURNAMENT CARDS ===== */
         .card-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 320px));
+            grid-template-columns: 1fr;
             gap: 16px;
         }
 
         .card {
             background: var(--card);
-            border-radius: 14px;
+            border-radius: 20px;
             border: 1px solid var(--line);
-            overflow: hidden;
+            overflow: visible;
             display: flex;
             flex-direction: column;
             position: relative;
+            cursor: pointer;
+            transition: transform 0.12s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
         }
 
         .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06);
+            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.1);
+            border-color: #D8DDD1;
+        }
+
+        .card:active {
+            transform: scale(0.977);
+            box-shadow: 0 4px 10px rgba(15, 23, 42, 0.07);
+        }
+
+        .card:focus-visible {
+            outline: 2px solid var(--pitch);
+            outline-offset: 3px;
         }
 
         .card-banner {
-            height: 100px;
-            background: linear-gradient(135deg, var(--pitch-dark), var(--pitch));
+            height: 108px;
+            border-radius: 20px 20px 0 0;
+            overflow: hidden;
+            background:
+                repeating-linear-gradient(
+                    115deg,
+                    rgba(255, 255, 255, 0.05) 0px,
+                    rgba(255, 255, 255, 0.05) 1px,
+                    transparent 1px,
+                    transparent 34px
+                ),
+                linear-gradient(135deg, var(--pitch-dark), var(--pitch) 65%, var(--pitch-light));
             padding: 14px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             color: #fff;
+            position: relative;
         }
 
         .sport-tag {
             align-self: flex-start;
-            background: rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.16);
             font-size: 0.62rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.7px;
             padding: 4px 9px;
             border-radius: 6px;
         }
@@ -355,18 +347,28 @@
             right: 12px;
             display: flex;
             gap: 6px;
+            z-index: 3;
         }
 
         .action-btn {
-            width: 28px;
-            height: 28px;
+            width: 30px;
+            height: 30px;
             border-radius: 50%;
-            background: rgba(255, 255, 255, 0.18);
+            background: rgba(255, 255, 255, 0.16);
             border: none;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            transition: background 0.15s ease, transform 0.1s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.28);
+        }
+
+        .action-btn:active {
+            transform: scale(0.9);
         }
 
         .action-btn svg {
@@ -388,16 +390,41 @@
         }
 
         .card-title {
-            font-size: 0.95rem;
+            font-size: 1rem;
             font-weight: 700;
             margin-top: auto;
+            line-height: 1.25;
+            padding-right: 70px;
         }
 
         .card-body {
-            padding: 14px;
+            position: relative;
+            padding: 18px 16px 16px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
+            border-radius: 0 0 20px 20px;
+            border-top: 1.5px dashed #D8DDD1;
+        }
+
+        .card-body::before,
+        .card-body::after {
+            content: '';
+            position: absolute;
+            top: -8px;
+            width: 16px;
+            height: 16px;
+            background: var(--bg);
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .card-body::before {
+            left: -8px;
+        }
+
+        .card-body::after {
+            right: -8px;
         }
 
         .card-stats {
@@ -410,24 +437,35 @@
         .card-stats b {
             color: var(--ink);
             font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            margin-left: 3px;
         }
 
         .status {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 0.65rem;
+            gap: 8px;
+            font-size: 0.64rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.5px;
         }
 
         .status-dot {
+            position: relative;
             width: 6px;
             height: 6px;
             border-radius: 50%;
             background: var(--rust);
-            animation: pulse 1.4s infinite;
+        }
+
+        .status-dot::after {
+            content: '';
+            position: absolute;
+            inset: -4px;
+            border-radius: 50%;
+            border: 1.4px solid var(--rust);
+            animation: ripple 1.6s ease-out infinite;
         }
 
         .status.live {
@@ -438,22 +476,30 @@
             color: var(--ochre);
         }
 
-        .enter-btn {
-            width: 100%;
-            text-align: center;
-            background: #F1F5F9;
-            color: var(--pitch);
-            font-size: 0.78rem;
+        .card-cta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.8rem;
             font-weight: 700;
-            padding: 9px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
+            color: var(--pitch);
+            padding-top: 4px;
+            border-top: 1px solid var(--line);
+            margin-top: 2px;
+            padding-top: 12px;
         }
 
-        .enter-btn:hover {
-            background: var(--pitch);
-            color: #fff;
+        .card-cta svg {
+            width: 16px;
+            height: 16px;
+            stroke: var(--pitch);
+            stroke-width: 2.5;
+            fill: none;
+            transition: transform 0.15s ease;
+        }
+
+        .card:hover .card-cta svg {
+            transform: translateX(3px);
         }
 
         /* ===== NEWS VIEW ===== */
@@ -466,7 +512,7 @@
 
         .news-card {
             background: var(--card);
-            border-radius: 10px;
+            border-radius: 16px;
             border: 1px solid var(--line);
             padding: 16px;
             display: flex;
@@ -480,18 +526,19 @@
             font-size: 0.62rem;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.5px;
         }
 
         .news-badge {
             color: var(--pitch);
-            background: #E2E8F0;
-            padding: 2px 7px;
-            border-radius: 4px;
+            background: var(--ochre-soft);
+            padding: 3px 8px;
+            border-radius: 5px;
         }
 
         .news-time {
-            color: var(--ink-soft);
+            color: var(--ink-faint);
+            font-weight: 600;
         }
 
         .news-scope {
@@ -501,19 +548,19 @@
         }
 
         .news-card h4 {
-            font-size: 0.88rem;
+            font-size: 0.9rem;
             font-weight: 700;
         }
 
         .news-card p {
             font-size: 0.8rem;
             color: var(--ink-soft);
-            line-height: 1.5;
+            line-height: 1.55;
         }
 
         .news-interactions {
             display: flex;
-            gap: 12px;
+            gap: 14px;
             margin-top: 10px;
             padding-top: 10px;
             border-top: 1px solid var(--line);
@@ -528,7 +575,8 @@
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 4px;
+            gap: 5px;
+            transition: color 0.15s ease;
         }
 
         .interaction-btn:hover, .interaction-btn.active {
@@ -550,9 +598,9 @@
 
         .news-comments-section {
             display: none;
-            background: #F8FAFC;
+            background: var(--bg);
             padding: 12px;
-            border-radius: 8px;
+            border-radius: 10px;
             margin-top: 8px;
         }
 
@@ -560,7 +608,7 @@
             font-size: 0.78rem;
             margin-bottom: 8px;
             padding-bottom: 8px;
-            border-bottom: 1px solid #E2E8F0;
+            border-bottom: 1px solid var(--line);
         }
 
         .comment:last-child {
@@ -582,125 +630,136 @@
 
         .comment-input-area input {
             flex: 1;
-            padding: 8px 12px;
+            padding: 9px 12px;
             border: 1px solid var(--line);
-            border-radius: 6px;
+            border-radius: 7px;
             font-size: 0.78rem;
             font-family: inherit;
+            background: var(--card);
+        }
+
+        .comment-input-area input:focus {
+            outline: none;
+            border-color: var(--pitch);
+            box-shadow: 0 0 0 3px rgba(27, 67, 50, 0.1);
         }
 
         .comment-input-area button {
             background: var(--pitch);
             color: white;
             border: none;
-            padding: 8px 14px;
-            border-radius: 6px;
+            padding: 9px 14px;
+            border-radius: 7px;
             font-size: 0.75rem;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
         }
 
+        .comment-input-area button:hover {
+            background: var(--pitch-light);
+        }
+
         .empty-state {
-            padding: 40px 20px;
+            padding: 48px 20px;
             text-align: center;
             color: var(--ink-soft);
             font-size: 0.85rem;
             grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
         }
 
-        /* ===== BOTTOM NAV (mobile) & NEWS NOTIFICATION ===== */
+        .empty-state svg {
+            width: 30px;
+            height: 30px;
+            stroke: var(--ink-faint);
+            opacity: 0.7;
+        }
+
+        /* ===== BOTTOM TAB BAR ===== */
         .nav {
             position: fixed;
             bottom: 0;
             left: 0;
             width: 100%;
-            height: 72px;
-            background: rgba(255, 255, 255, 0.97);
-            backdrop-filter: blur(10px);
+            height: calc(var(--nav-h) + var(--sab));
+            padding-bottom: var(--sab);
+            background: rgba(255, 255, 255, 0.94);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
             border-top: 1px solid var(--line);
             display: flex;
-            justify-content: space-around;
+            justify-content: center;
             align-items: center;
+            gap: 10px;
             z-index: 100;
         }
 
         .nav-btn {
             position: relative;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            gap: 4px;
-            color: #94A3B8;
-            font-size: 0.62rem;
-            font-weight: 600;
+            gap: 7px;
+            color: var(--ink-faint);
+            font-size: 0.72rem;
+            font-weight: 700;
             cursor: pointer;
+            padding: 9px 18px;
+            border-radius: 22px;
+            transition: background 0.16s ease, color 0.16s ease;
         }
 
         .nav-btn svg {
-            width: 20px;
-            height: 20px;
+            width: 19px;
+            height: 19px;
             fill: none;
-            stroke: #94A3B8;
+            stroke: var(--ink-faint);
             stroke-width: 2;
+            transition: stroke 0.16s ease;
         }
 
         .nav-btn.active {
             color: var(--pitch);
+            background: rgba(27, 67, 50, 0.09);
         }
 
         .nav-btn.active svg {
             stroke: var(--pitch);
         }
 
+        .nav-btn:active {
+            transform: scale(0.94);
+        }
+
         .news-alert-dot {
             position: absolute;
-            top: -2px;
-            right: 25%;
-            width: 8px;
-            height: 8px;
+            top: 4px;
+            right: 10px;
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
             background: var(--rust);
-            border: 2px solid #fff;
+            border: 1.5px solid #fff;
             display: none;
         }
 
-        @media (max-width: 480px) {
-            .filters {
-                padding: 14px 16px 0 16px;
-                gap: 8px;
-                flex-wrap: nowrap;
-            }
+        @keyframes ripple {
+            0% { transform: scale(0.6); opacity: 0.8; }
+            100% { transform: scale(2); opacity: 0; }
+        }
 
-            .filter-box {
-                min-width: 0;
-                max-width: none;
-            }
-
-            .filter-box label {
-                font-size: 0.56rem;
-                margin-bottom: 4px;
-            }
-
-            .select-trigger {
-                padding: 8px 8px 8px 10px;
-                font-size: 0.74rem;
-            }
-
-            .select-trigger .chevron {
-                width: 12px;
-                height: 12px;
-                margin-left: 4px;
-            }
-
-            .tabs, .main-content {
-                padding-left: 16px;
-                padding-right: 16px;
+        /* ===== ADAPTIVE RESPONSIVENESS ===== */
+        @media (min-width: 560px) {
+            .card-grid {
+                grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             }
         }
 
         @media (min-width: 768px) {
             .layout {
-                padding-bottom: 0;
+                padding-bottom: 24px;
                 display: grid;
                 grid-template-columns: 220px 1fr;
                 padding-top: 0;
@@ -708,7 +767,46 @@
 
             .content-col {
                 grid-column: 2;
-                margin-top: var(--header-h);
+                margin-top: calc(var(--header-h) + var(--sat));
+            }
+
+            /* Restore spacious typography and filter spacing on Desktop */
+            .page-intro {
+                padding: 22px 20px 4px 20px;
+            }
+
+            .page-intro h2 {
+                font-size: 1.65rem;
+            }
+
+            .page-intro p {
+                font-size: 0.8rem;
+                margin-top: 3px;
+            }
+
+            .filters {
+                flex-direction: row;
+                gap: 12px;
+                padding: 16px 8px 4px 8px;
+                margin: 0;
+            }
+
+            .chip-group {
+                flex: 1;
+            }
+
+            .chip-group-label {
+                font-size: 0.62rem;
+                margin-bottom: 7px;
+            }
+
+            .chip {
+                padding: 9px 16px;
+                font-size: 0.79rem;
+            }
+
+            .main-content {
+                padding: 18px 8px 0 8px;
             }
 
             .nav {
@@ -721,23 +819,16 @@
                 padding: 24px 14px;
                 gap: 4px;
                 background: transparent;
+                backdrop-filter: none;
                 border-top: none;
                 border-right: 1px solid var(--line);
-                margin-top: var(--header-h);
+                margin-top: calc(var(--header-h) + var(--sat));
                 grid-column: 1;
             }
 
             .nav-btn {
-                flex-direction: row;
+                border-radius: 9px;
                 padding: 10px 12px;
-                border-radius: 8px;
-                gap: 12px;
-                font-size: 0.85rem;
-            }
-
-            .nav-btn:hover {
-                background: #E2E8F0;
-                color: var(--ink);
             }
 
             .nav-btn.active {
@@ -750,38 +841,20 @@
             }
 
             .news-alert-dot {
-                top: 12px;
+                top: 10px;
                 right: 12px;
-                border: 2px solid var(--bg);
-            }
-
-            .nav-btn:hover .news-alert-dot {
-                border-color: #E2E8F0;
+                border-color: var(--bg);
             }
 
             .nav-btn.active .news-alert-dot {
                 border-color: var(--pitch);
-            }
-
-            .tabs, .filters, .main-content {
-                padding-left: 28px;
-                padding-right: 28px;
-            }
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.35;
             }
         }
     </style>
 </head>
 <body>
 
-<div class="header">
+<div class="header" id="app-header">
     <div class="header-row">
         <div class="brand">
             <div class="crest">
@@ -791,6 +864,10 @@
                 <h1>UG Sports</h1>
                 <p>Tournament Lobby</p>
             </div>
+        </div>
+        <div class="live-pill">
+            <span class="status-dot"></span>
+            Live
         </div>
     </div>
 </div>
@@ -807,12 +884,6 @@
             </svg>
             <span>Lobby</span>
         </div>
-        <div class="nav-btn" onclick="switchView('fav')">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            <span>Favorites</span>
-        </div>
         <div class="nav-btn" onclick="switchView('news')" id="nav-news-btn">
             <svg viewBox="0 0 24 24">
                 <path d="M4 4h16v16H4z"/>
@@ -825,78 +896,45 @@
     </nav>
 
     <div class="content-col">
-        <div class="tabs" id="lobby-tabs">
-            <div class="tab active" id="tab-all" onclick="switchView('all')">Ongoing</div>
-            <div class="tab" id="tab-fav" onclick="switchView('fav')">Favorites</div>
+        <div class="page-intro" id="lobby-intro">
+            <h2>Active Tournaments</h2>
+            <p>Live scores and fixtures across Uasin Gishu County</p>
         </div>
 
         <div class="filters" id="lobby-filters">
-            <div class="filter-box">
-                <label>Sport</label>
-                <div class="select" data-select="sport">
-                    <button type="button" class="select-trigger" onclick="toggleSelect(this)">
-                        <span class="select-value">All Sports</span>
-                        <svg class="chevron" viewBox="0 0 24 24">
-                            <path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-                        </svg>
-                    </button>
-                    <div class="select-menu">
-                        <div class="select-option selected" data-value="all" onclick="chooseOption(this)">
-                            <span>All Sports</span>
-                            <svg class="check" viewBox="0 0 24 24">
-                                <path d="M20 6L9 17l-5-5"/>
-                            </svg>
-                        </div>
-                        {% for sport in sports %}
-                        <div class="select-option" data-value="{{ sport.pk }}" onclick="chooseOption(this)">
-                            <span>{{ sport.name }}</span>
-                            <svg class="check" viewBox="0 0 24 24">
-                                <path d="M20 6L9 17l-5-5"/>
-                            </svg>
-                        </div>
-                        {% endfor %}
-                    </div>
+            <div class="chip-group">
+                <span class="chip-group-label">Sport</span>
+                <div class="chip-row">
+                    <div class="chip active" data-group="sport" data-value="all" onclick="chooseChip(this)">All Sports</div>
+                    {% for sport in sports %}
+                    <div class="chip" data-group="sport" data-value="{{ sport.pk }}" onclick="chooseChip(this)">{{ sport.name }}</div>
+                    {% endfor %}
                 </div>
             </div>
 
-            <div class="filter-box">
-                <label>Sub-County</label>
-                <div class="select" data-select="subcounty">
-                    <button type="button" class="select-trigger" onclick="toggleSelect(this)">
-                        <span class="select-value">All Sub-Counties</span>
-                        <svg class="chevron" viewBox="0 0 24 24">
-                            <path d="M19.5 8.25l-7.5 7.5-7.5-7.5"/>
-                        </svg>
-                    </button>
-                    <div class="select-menu">
-                        <div class="select-option selected" data-value="all" onclick="chooseOption(this)">
-                            <span>All Sub-Counties</span>
-                            <svg class="check" viewBox="0 0 24 24">
-                                <path d="M20 6L9 17l-5-5"/>
-                            </svg>
-                        </div>
-                        {% for sc in sub_counties %}
-                        <div class="select-option" data-value="{{ sc.pk }}" onclick="chooseOption(this)">
-                            <span>{{ sc.name }}</span>
-                            <svg class="check" viewBox="0 0 24 24">
-                                <path d="M20 6L9 17l-5-5"/>
-                            </svg>
-                        </div>
-                        {% endfor %}
-                    </div>
+            <div class="chip-group">
+                <span class="chip-group-label">Sub-County</span>
+                <div class="chip-row">
+                    <div class="chip active" data-group="subcounty" data-value="all" onclick="chooseChip(this)">All Sub-Counties</div>
+                    {% for sc in sub_counties %}
+                    <div class="chip" data-group="subcounty" data-value="{{ sc.pk }}" onclick="chooseChip(this)">{{ sc.name }}</div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
         <div class="main-content">
             <div id="ongoing-view" class="view active">
-                <div class="section-heading">Active Tournaments <span class="sub">Tap to enter</span></div>
+                <div class="section-heading"><span></span><span class="sub">Tap a card to enter</span></div>
                 <div class="card-grid" id="ongoing-grid">
                     {% for tournament in tournaments %}
                     <div class="card" data-id="tournament-{{ tournament.pk }}"
                          data-sport="{% for sport in tournament.sports.all %}{{ sport.pk }}{% if not forloop.last %},{% endif %}{% endfor %}"
-                         data-subcounty="{{ tournament.sub_county_id|default:'' }}">
-                        <div class="card-banner{% if forloop.counter|divisibleby:2 %} blue{% endif %}">
+                         data-subcounty="{{ tournament.sub_county_id|default:'' }}"
+                         role="button" tabindex="0"
+                         onclick="Shell.goto('tournament-{{ tournament.pk }}', '{% url 'client_dashboard' tournament.pk %}')"
+                         onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();Shell.goto('tournament-{{ tournament.pk }}', '{% url 'client_dashboard' tournament.pk %}');}">
+                        <div class="card-banner">
                             <span class="sport-tag">{% for sport in tournament.sports.all %}{{ sport.name }}{% if not forloop.last %} & {% endif %}{% endfor %}</span>
                             <div class="card-actions">
                                 <button class="action-btn like-btn"
@@ -916,8 +954,8 @@
                         </div>
                         <div class="card-body">
                             <div class="card-stats">
-                                <span>Season: <b>{{ tournament.season }}</b></span>
-                                <span>Teams: <b>{{ tournament.team_count }}</b></span>
+                                <span>Season <b>{{ tournament.season }}</b></span>
+                                <span>Teams <b>{{ tournament.team_count }}</b></span>
                             </div>
                             {% if tournament.status == 'ongoing' %}
                             <div class="status live"><span class="status-dot"></span> Live now</div>
@@ -926,10 +964,10 @@
                                 {% if tournament.start_date %}Starts {{ tournament.start_date|date:"D, d M" }}{% else %}Starting soon{% endif %}
                             </div>
                             {% endif %}
-                            <button class="enter-btn"
-                                    onclick="Shell.goto('tournament-{{ tournament.pk }}', '{% url 'client_dashboard' tournament.pk %}')">
-                                Enter Tournament
-                            </button>
+                            <div class="card-cta">
+                                <span>View tournament</span>
+                                <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+                            </div>
                         </div>
                     </div>
                     {% empty %}
@@ -944,17 +982,8 @@
                 </div>
             </div>
 
-            <div id="favorites-view" class="view">
-                <div class="section-heading">My Favorites</div>
-                <div class="card-grid" id="favorites-grid">
-                    <div class="empty-state">
-                        <p>You haven't added any favorites yet.</p>
-                    </div>
-                </div>
-            </div>
-
             <div id="news-view" class="view">
-                <div class="section-heading">News</div>
+                <div class="section-heading">News<span class="sub">Latest updates</span></div>
                 <div class="news-list">
                     {% for post in news_posts %}
                     <div class="news-card" data-post-id="{{ post.pk }}">
@@ -963,9 +992,9 @@
                             <span class="news-time">{{ post.published_at|timesince }} ago</span>
                         </div>
                         {% if post.phase %}
-                        <div class="news-scope">{{ post.phase.tournament.name }} · {{ post.phase.name }}</div>
+                        <div class="news-scope">{{ post.phase.tournament.name }} &middot; {{ post.phase.name }}</div>
                         {% elif post.sub_county %}
-                        <div class="news-scope">{{ post.sub_county.name }} · County-Wide</div>
+                        <div class="news-scope">{{ post.sub_county.name }} &middot; County-Wide</div>
                         {% endif %}
                         <h4>{{ post.title }}</h4>
                         <p>{{ post.body }}</p>
@@ -1008,6 +1037,7 @@
     </div>
 </div>
 
+
 <script>
     window.Shell = window.Shell || {
         goto: function(id, url) {
@@ -1038,63 +1068,44 @@
     // ==========================================
     function switchView(view) {
         document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
-
-        if (view === 'all' || view === 'fav') {
-            document.querySelector('.nav-btn[onclick="switchView(\'all\')"]').classList.add('active');
-        } else {
-            const activeBtn = document.querySelector(`.nav-btn[onclick="switchView('${view}')"]`);
-            if (activeBtn) activeBtn.classList.add('active');
-        }
+        const activeBtn = document.querySelector(`.nav-btn[onclick="switchView('${view}')"]`);
+        if (activeBtn) activeBtn.classList.add('active');
 
         document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
         document.getElementById('lobby-filters').style.display = 'none';
-        document.getElementById('lobby-tabs').style.display = 'none';
+        document.getElementById('lobby-intro').style.display = 'none';
 
         if (view === 'all') {
             document.getElementById('ongoing-view').classList.add('active');
             document.getElementById('lobby-filters').style.display = 'flex';
-            document.getElementById('lobby-tabs').style.display = 'flex';
-            activateTab('tab-all');
-        } else if (view === 'fav') {
-            document.getElementById('favorites-view').classList.add('active');
-            document.getElementById('lobby-filters').style.display = 'flex';
-            document.getElementById('lobby-tabs').style.display = 'flex';
-            activateTab('tab-fav');
+            document.getElementById('lobby-intro').style.display = 'block';
         } else if (view === 'news') {
             document.getElementById('news-view').classList.add('active');
             const indicator = document.getElementById('news-indicator');
             if (indicator) indicator.style.display = 'none';
         }
+        window.scrollTo({ top: 0, behavior: 'auto' });
     }
 
-    function activateTab(tabId) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById(tabId).classList.add('active');
-    }
-
-    function toggleSelect(button) {
-        const select = button.parentElement;
-        const isOpen = select.classList.contains('open');
-        document.querySelectorAll('.select').forEach(s => s.classList.remove('open'));
-        if (!isOpen) select.classList.add('open');
-    }
+    // ===== native-style header shadow on scroll =====
+    const appHeader = document.getElementById('app-header');
+    window.addEventListener('scroll', () => {
+        appHeader.classList.toggle('scrolled', window.scrollY > 6);
+    }, { passive: true });
 
     // ==========================================
-    // FILTERING (Sport + Sub-County)
+    // CHIP FILTERING (Sport + Sub-County)
     // ==========================================
-    function chooseOption(optionElement) {
-        const select = optionElement.closest('.select');
-        select.querySelectorAll('.select-option').forEach(opt => opt.classList.remove('selected'));
-        optionElement.classList.add('selected');
-        select.querySelector('.select-value').textContent = optionElement.querySelector('span').textContent;
-        select.classList.remove('open');
-
+    function chooseChip(el) {
+        const group = el.dataset.group;
+        document.querySelectorAll(`.chip[data-group="${group}"]`).forEach(c => c.classList.remove('active'));
+        el.classList.add('active');
         applyFilters();
     }
 
     function applyFilters() {
-        const sportSelected = document.querySelector('.select[data-select="sport"] .select-option.selected');
-        const subcountySelected = document.querySelector('.select[data-select="subcounty"] .select-option.selected');
+        const sportSelected = document.querySelector('.chip[data-group="sport"].active');
+        const subcountySelected = document.querySelector('.chip[data-group="subcounty"].active');
 
         const sportVal = sportSelected ? sportSelected.dataset.value : 'all';
         const subcountyVal = subcountySelected ? subcountySelected.dataset.value : 'all';
@@ -1129,17 +1140,11 @@
                 emptyMsg.innerHTML = '<p>No tournaments match these filters.</p>';
                 grid.appendChild(emptyMsg);
             }
-            emptyMsg.style.display = 'block';
+            emptyMsg.style.display = 'flex';
         } else if (emptyMsg) {
             emptyMsg.style.display = 'none';
         }
     }
-
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.select')) {
-            document.querySelectorAll('.select').forEach(s => s.classList.remove('open'));
-        }
-    });
 
     function toggleAction(event, btn, action, targetId) {
         event.stopPropagation();
