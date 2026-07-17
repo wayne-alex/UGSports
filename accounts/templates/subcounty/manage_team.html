@@ -1,8 +1,8 @@
 {% extends "subcounty/subcountyadmin_base.html" %}
 
-{% block title %}{{ team.name }} — UG Sports Admin{% endblock %}
+{% block title %}{{ team.name }} · UG Sports Admin{% endblock %}
 {% block page_eyebrow %}{{ team.sport.name }}{% endblock %}
-{% block page_title %}{{ team.name }}{% endblock %}
+block page_title %}{{ team.name }}{% endblock %}
 
 {% block header_actions %}
 {% if phase %}
@@ -109,12 +109,13 @@
         </div>
     </div>
 
+    <!-- BULK ADD PANEL -->
     <div class="inline-form-panel" id="bulk-add-panel">
         <div class="form-panel-title">Bulk Add Players via CSV</div>
         <p style="font-size:0.82rem; color:var(--ink-soft); margin-bottom:14px; line-height:1.5;">
             Upload a CSV with a header row containing <code>name</code> and <code>jersey_number</code>
             (required), plus optional <code>position</code> (GK, DEF, MID, ATT) and <code>national_id</code> columns.
-            Rows with missing data, invalid jersey numbers, or duplicate jersey numbers are skipped and reported —
+            Rows with missing data, invalid jersey numbers, or duplicate jersey numbers are skipped and reported &mdash;
             the rest of the file still imports.
         </p>
         <form method="post" enctype="multipart/form-data">
@@ -131,6 +132,7 @@
         </form>
     </div>
 
+    <!-- ADD PLAYER PANEL -->
     <div class="inline-form-panel" id="add-player-panel">
         <div class="form-panel-title">Add Player</div>
         <form method="post">
@@ -148,16 +150,57 @@
                 <div class="form-field-box">
                     <label>Position</label>
                     <select name="position">
-                        <option value="">— Optional —</option>
+                        <option value="">-- Optional --</option>
                         {% for value, label in positions %}
                         <option value="{{ value }}">{{ label }}</option>
                         {% endfor %}
                     </select>
                 </div>
+                <div class="form-field-box" style="display: flex; align-items: center; gap: 8px; margin-top: 24px;">
+                    <input type="checkbox" name="is_captain" id="add_is_captain" style="width: auto; margin: 0;">
+                    <label for="add_is_captain" style="margin: 0; cursor: pointer;">Team Captain</label>
+                </div>
             </div>
             <div class="form-actions">
                 <button type="button" class="btn-ghost" onclick="toggleFormPanel('add-player-panel')">Cancel</button>
                 <button type="submit" class="btn-primary">Add Player</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- EDIT PLAYER PANEL (Dynamically filled via JavaScript) -->
+    <div class="inline-form-panel" id="edit-player-panel">
+        <div class="form-panel-title">Edit Player</div>
+        <form method="post" id="edit-player-form">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="edit_player">
+            <input type="hidden" name="player_id" id="edit_player_id">
+            <div class="form-grid-columns">
+                <div class="form-field-box">
+                    <label>Player Name</label>
+                    <input type="text" name="player_name" id="edit_player_name" required>
+                </div>
+                <div class="form-field-box">
+                    <label>Jersey Number</label>
+                    <input type="number" name="jersey_number" id="edit_jersey_number" min="1" required>
+                </div>
+                <div class="form-field-box">
+                    <label>Position</label>
+                    <select name="position" id="edit_position">
+                        <option value="">-- Optional --</option>
+                        {% for value, label in positions %}
+                        <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-field-box" style="display: flex; align-items: center; gap: 8px; margin-top: 24px;">
+                    <input type="checkbox" name="is_captain" id="edit_is_captain" style="width: auto; margin: 0;">
+                    <label for="edit_is_captain" style="margin: 0; cursor: pointer;">Team Captain</label>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-ghost" onclick="toggleFormPanel('edit-player-panel')">Cancel</button>
+                <button type="submit" class="btn-primary">Save Changes</button>
             </div>
         </form>
     </div>
@@ -168,14 +211,28 @@
             <div class="row-left">
                 <div class="avatar-chip mono">{{ player.jersey_number }}</div>
                 <div>
-                    <div class="cell-main">{{ player.name }}</div>
+                    <div class="cell-main">
+                        {{ player.name }}
+                        {% if player.is_captain %}
+                        <span class="badge" style="background: var(--surface-warning-subtle, #fef3c7); color: var(--warning-dark, #b45309); font-size: 0.72rem; padding: 2px 6px; margin-left: 6px; border-radius: 4px;">
+                            &starf; Captain
+                        </span>
+                        {% endif %}
+                    </div>
                     <div class="cell-sub">
                         {% if player.position %}{{ player.get_position_display }} &middot; {% endif %}
                         {{ player.goals }} goal{{ player.goals|pluralize }}
                     </div>
                 </div>
             </div>
-            <div class="row-right">
+            <div class="row-right" style="display: flex; gap: 8px;">
+                <!-- Edit Player Button -->
+                <button type="button" class="icon-btn" title="Edit Player"
+                        onclick="openEditPlayerModal('{{ player.pk }}', '{{ player.name|escapejs }}', '{{ player.jersey_number }}', '{{ player.position }}', {{ player.is_captain|yesno:'true,false' }})">
+                    <svg viewBox="0 0 24 24" style="width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                </button>
+
+                <!-- Delete Player Button -->
                 <form method="post" onsubmit="return confirm('Remove {{ player.name }} from the roster?');">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="remove_player">
@@ -243,6 +300,22 @@
 
     function toggleFormPanel(panelId) {
         document.getElementById(panelId).classList.toggle('active');
+    }
+
+    function openEditPlayerModal(id, name, jersey, position, isCaptain) {
+        // Populating the fields in the Edit Player panel
+        document.getElementById('edit_player_id').value = id;
+        document.getElementById('edit_player_name').value = name;
+        document.getElementById('edit_jersey_number').value = jersey;
+        document.getElementById('edit_position').value = position;
+        document.getElementById('edit_is_captain').checked = isCaptain;
+
+        // Force open the edit panel if it's currently hidden
+        const panel = document.getElementById('edit-player-panel');
+        if (!panel.classList.contains('active')) {
+            panel.classList.add('active');
+        }
+        panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 </script>
 {% endblock %}

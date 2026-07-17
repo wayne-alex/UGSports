@@ -204,6 +204,11 @@
         document.getElementById('staff-last-name-field').value = '';
         document.getElementById('staff-email-field').value = '';
         document.getElementById('staff-phone-field').value = '';
+
+        // Reset password placeholder for creation
+        document.getElementById('staff-password-field').value = '';
+        document.getElementById('staff-password-field').placeholder = 'UGSports2026! (Default)';
+
         document.getElementById('staff-role-field').value = '';
         handleRoleChange(); // Reset location fields
         document.getElementById('staff-form-submit').innerText = 'Provision Account';
@@ -218,12 +223,17 @@
         const baseUrl = '{% url "staff_edit" 0 %}';
         document.getElementById('staff-form').action = baseUrl.replace('0', row.dataset.id);
 
-        // Populate fields from data attributes (make sure row has data-id)
-        document.getElementById('staff-id-field').value = row.dataset.id; // staff_id hidden field set to staff.pk
+        // Populate fields from data attributes
+        document.getElementById('staff-id-field').value = row.dataset.id;
         document.getElementById('staff-first-name-field').value = row.dataset.firstName;
         document.getElementById('staff-last-name-field').value = row.dataset.lastName;
         document.getElementById('staff-email-field').value = row.dataset.email;
         document.getElementById('staff-phone-field').value = row.dataset.phone;
+
+        // Reset password field and hint that leaving it blank keeps the old password
+        document.getElementById('staff-password-field').value = '';
+        document.getElementById('staff-password-field').placeholder = 'Leave blank to keep current';
+
         document.getElementById('staff-role-field').value = row.dataset.roleValue;
         handleRoleChange(); // Show/hide location selectors
 

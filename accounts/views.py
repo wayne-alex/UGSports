@@ -207,8 +207,15 @@ def StaffAccountsView(request):
 def StaffCreateView(request):
     if request.method == 'POST':
         email = request.POST.get('email')
+
+        # Get password and ensure it's a string (no trailing comma)
+        password = request.POST.get('password')
+        if not password:
+            password = 'UGSports2026!'
+
         try:
-            user = User.objects.create(
+            # 1. Instantiate the object in memory first
+            user = User(
                 first_name=request.POST.get('first_name'),
                 last_name=request.POST.get('last_name'),
                 email=email,
@@ -219,11 +226,10 @@ def StaffCreateView(request):
                 ward_id=request.POST.get('ward') or None,
                 is_staff=False
             )
-            password = request.POST.get('password'),
-            if password:
-                user.set_password(password)
-            else:
-                user.set_password('UGSports2026!')
+            # 2. Set the hashed password safely
+            user.set_password(password)
+
+            # 3. Save to the database exactly once
             user.save()
 
             log_audit_action(request.user, AuditLog.Action.CREATE, user, request=request)
@@ -268,6 +274,11 @@ def StaffUpdateView(request, pk):
         else:
             user.sub_county = None
             user.ward = None
+
+        # --- NEW PASSWORD LOGIC ---
+        password = request.POST.get('password')
+        if password and password.strip():  # Check if a non-empty password was provided
+            user.set_password(password)
 
         user.save()
 
@@ -1802,6 +1813,7 @@ def ward_manage_team(request, pk):
                 name = request.POST.get('player_name', '').strip()
                 jersey_raw = request.POST.get('jersey_number', '').strip()
                 position = request.POST.get('position', '').strip()
+                is_captain = 'is_captain' in request.POST
 
                 if not name or not jersey_raw:
                     messages.error(request, "Both name and jersey number are required.")
@@ -1814,16 +1826,60 @@ def ward_manage_team(request, pk):
                         if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exists():
                             messages.error(request, f"Jersey number #{jersey} is already taken on this team.")
                         else:
+                            # If this player is marked as captain, demote existing captains on this team
+                            if is_captain:
+                                team.players.filter(is_captain=True).update(is_captain=False)
+
                             player = Player.objects.create(
                                 team=team,
                                 tournament=tournament,
                                 name=name,
                                 jersey_number=jersey,
                                 position=position,
+                                is_captain=is_captain,
                                 created_by=request.user,
                             )
                             log_audit_action(request.user, AuditLog.Action.CREATE, player, request=request)
                             messages.success(request, f"{name} added to the squad.")
+
+        elif action == 'edit_player':
+            player_id = request.POST.get('player_id')
+            player = get_object_or_404(Player, pk=player_id, team=team)
+
+            name = request.POST.get('player_name', '').strip()
+            jersey_raw = request.POST.get('jersey_number', '').strip()
+            position = request.POST.get('position', '').strip()
+            is_captain = 'is_captain' in request.POST
+
+            if not name or not jersey_raw:
+                messages.error(request, "Both name and jersey number are required.")
+            else:
+                try:
+                    jersey = int(jersey_raw)
+                except ValueError:
+                    messages.error(request, "Jersey number must be a whole number.")
+                else:
+                    # Make sure jersey number is not already taken by a DIFFERENT player on the team
+                    if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exclude(
+                            pk=player.pk).exists():
+                        messages.error(request, f"Jersey number #{jersey} is already taken by another player.")
+                    else:
+                        import copy
+                        old_player = copy.deepcopy(player)
+
+                        # If set as captain, clear any previous captains on the team
+                        if is_captain:
+                            team.players.filter(is_captain=True).exclude(pk=player.pk).update(is_captain=False)
+
+                        player.name = name
+                        player.jersey_number = jersey
+                        player.position = position
+                        player.is_captain = is_captain
+                        player.save()
+
+                        changes = calculate_model_changes(old_player, player)
+                        log_audit_action(request.user, AuditLog.Action.UPDATE, player, changes=changes, request=request)
+                        messages.success(request, f"{player.name}'s details updated successfully.")
 
         elif action == 'remove_player':
             player = get_object_or_404(Player, pk=request.POST.get('player_id'), team=team)
@@ -2807,9 +2863,11 @@ def subcounty_manage_team(request, pk):
                         messages.error(request, "Couldn't read that file. Please save it as UTF-8 CSV and try again.")
                     else:
                         reader = csv.DictReader(StringIO(decoded))
-                        headers = {h.strip().lower() for h in (reader.fieldnames or [])}
+                        # Normalize header list for checking
+                        raw_headers = reader.fieldnames or []
+                        headers_normalized = {h.strip().lower() for h in raw_headers}
 
-                        if not {'name', 'jersey_number'}.issubset(headers):
+                        if not {'name', 'jersey_number'}.issubset(headers_normalized):
                             messages.error(request, "CSV must include 'name' and 'jersey_number' columns.")
                         else:
                             valid_positions = {c[0] for c in Player.Position.choices}
@@ -2821,12 +2879,14 @@ def subcounty_manage_team(request, pk):
                             to_create = []
                             errors = []
 
-                            for i, row in enumerate(reader, start=2):  # Row 2 = first data row (row 1 is header)
-                                row = {k.strip().lower(): (v or '').strip() for k, v in row.items()}
-                                name = row.get('name', '')
-                                jersey_raw = row.get('jersey_number', '')
-                                position = row.get('position', '').upper()
-                                national_id = row.get('national_id', '')
+                            for i, row in enumerate(reader, start=2):  # Row 2 = first data row
+                                # Safely clean keys & values to support mismatched casing in original headers
+                                cleaned_row = {k.strip().lower(): (v or '').strip() for k, v in row.items() if k}
+
+                                name = cleaned_row.get('name', '')
+                                jersey_raw = cleaned_row.get('jersey_number', '')
+                                position = cleaned_row.get('position', '').upper()
+                                national_id = cleaned_row.get('national_id', '')
 
                                 if not name or not jersey_raw:
                                     errors.append(f"Row {i}: missing name or jersey number.")
@@ -2844,9 +2904,13 @@ def subcounty_manage_team(request, pk):
                                     position = ''
 
                                 to_create.append(Player(
-                                    team=team, tournament=tournament, name=name,
-                                    jersey_number=jersey, position=position,
-                                    national_id=national_id, created_by=request.user,
+                                    team=team,
+                                    tournament=tournament,
+                                    name=name,
+                                    jersey_number=jersey,
+                                    position=position,
+                                    national_id=national_id,
+                                    created_by=request.user,
                                 ))
                                 seen_in_file.add(jersey)
 
