@@ -63,6 +63,7 @@ class User(AbstractUser):
         COUNTY_ICT_OFFICER = 'county_ict', 'County ICT Officer'
         SUB_COUNTY_ADMIN = 'sub_county_admin', 'Sub-County Admin'
         WARD_ADMIN = 'ward_admin', 'Ward Admin'
+        TEAM_MANAGER = 'team_manager', 'Team Manager'
 
     role = models.CharField(max_length=20, choices=Role.choices)
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ fixture.home_team.name }} vs {{ fixture.away_team.name }} — UG Sports</title>
+    <title>{{ fixture.home_team.name }} vs {{ fixture.away_team.name }} | UG Sports</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
@@ -104,6 +104,13 @@
             padding: 11px 18px; background: #FAFBFC; border-bottom: 1px solid var(--line);
             font-size: 0.66rem; font-weight: 700; color: var(--pitch);
             text-transform: uppercase; letter-spacing: 0.6px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .fx-formation-tag {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.64rem; font-weight: 700; color: var(--ochre-deep);
+            background: rgba(217,138,61,0.12); padding: 2px 8px; border-radius: 99px;
+            text-transform: none; letter-spacing: 0;
         }
         .fx-info-row {
             display: flex; justify-content: space-between; padding: 13px 18px;
@@ -113,6 +120,118 @@
         .fx-info-row .k { color: var(--ink-soft); font-weight: 600; }
         .fx-info-row .v { font-weight: 600; }
 
+        /* --- VISUAL STADIUM LINEUP SECTIONS --- */
+        .fx-pitch-container {
+            padding: 16px;
+            background: #F1F5F9;
+            border-bottom: 1px solid var(--line);
+        }
+        .fx-pitch {
+            background: linear-gradient(180deg, var(--pitch-dark) 0%, var(--pitch) 50%, var(--pitch-dark) 100%);
+            border-radius: 12px;
+            padding: 24px 12px;
+            position: relative;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column-reverse; /* Traditional: GK at bottom, FW at top */
+            gap: 28px;
+            border: 2px solid rgba(255,255,255,0.15);
+        }
+        /* Tactical Field Markings */
+        .fx-pitch::before {
+            content: ''; position: absolute; top: 50%; left: 0; right: 0;
+            height: 1px; background: rgba(255,255,255,0.15); pointer-events: none;
+        }
+        .fx-pitch::after {
+            content: ''; position: absolute; top: 50%; left: 50%;
+            width: 54px; height: 54px; border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.15);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+        .fx-pitch-row {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            width: 100%;
+            z-index: 2;
+        }
+        .fx-player-node {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 72px;
+            text-align: center;
+            position: relative;
+        }
+        .fx-player-icon-wrap {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            margin-bottom: 6px;
+        }
+        .fx-player-shirt {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: var(--card);
+            border: 2px solid var(--ochre);
+            color: var(--ink);
+            font-size: 0.72rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2);
+        }
+        .away-lineup .fx-player-shirt {
+            border-color: var(--ink-soft);
+            background: #E2E8F0;
+        }
+        /* Captain badge */
+        .fx-captain-badge {
+            position: absolute; top: -3px; left: -3px;
+            width: 15px; height: 15px; border-radius: 50%;
+            background: var(--rust); color: #fff;
+            font-size: 0.55rem; font-weight: 800;
+            display: flex; align-items: center; justify-content: center;
+            border: 1.5px solid #fff; z-index: 3;
+        }
+        /* Event Badges on Field Nodes */
+        .fx-node-event {
+            position: absolute;
+            top: -4px;
+            right: -6px;
+            display: flex;
+            gap: 2px;
+            background: var(--card);
+            border-radius: 4px;
+            padding: 1.5px 3px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+        .fx-node-badge { font-size: 0.6rem; display: inline-flex; align-items: center; line-height: 1; }
+        .fx-node-badge.card-yellow { color: #EAB308; }
+        .fx-node-badge.card-red { color: #EF4444; }
+
+        .fx-player-name-lbl {
+            color: #FFFFFF;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 100%;
+        }
+        .fx-player-jersey-lbl {
+            color: rgba(255,255,255,0.65);
+            font-size: 0.62rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* --- SQUAD LIST & BENCH --- */
         .fx-squad-row {
             display: flex; align-items: center; gap: 12px; padding: 11px 18px;
             border-bottom: 1px solid var(--line);
@@ -124,7 +243,11 @@
             display: flex; align-items: center; justify-content: center; flex-shrink: 0;
         }
         .fx-squad-name { font-size: 0.82rem; font-weight: 600; flex: 1; }
-        .fx-squad-pos { font-size: 0.68rem; color: var(--ink-soft); }
+        .fx-squad-pos { font-size: 0.68rem; color: var(--ink-soft); margin-right: 8px; }
+        .fx-squad-events { display: flex; gap: 6px; align-items: center; }
+        .fx-event-pill { font-size: 0.72rem; display: inline-flex; }
+        .fx-event-pill.card-yellow { color: #CA8A04; }
+        .fx-event-pill.card-red { color: #DC2626; }
 
         .fx-goal-row {
             display: flex; align-items: center; gap: 12px; padding: 12px 18px;
@@ -171,7 +294,8 @@
                 {% elif fixture.status == 'completed' %}Full Time
                 {% elif fixture.status == 'postponed' %}Postponed
                 {% elif fixture.status == 'cancelled' %}Cancelled
-                {% else %}{{ fixture.kickoff_at|date:"D, d M · H:i"|default:"Kickoff TBC" }}
+                {% elif fixture.kickoff_at %}{{ fixture.kickoff_at|date:"D, d M" }} &bull; {{ fixture.kickoff_at|date:"H:i" }}
+                {% else %}Kickoff TBC
                 {% endif %}
             </span>
         </div>
@@ -183,7 +307,7 @@
             </div>
             <div class="fx-score-block">
                 {% if result %}
-                    <div class="fx-score mono">{{ result.home_score }} <span class="fx-score-sep">–</span> {{ result.away_score }}</div>
+                    <div class="fx-score mono">{{ result.home_score }} <span class="fx-score-sep">:</span> {{ result.away_score }}</div>
                 {% else %}
                     <div class="fx-vs">VS</div>
                 {% endif %}
@@ -201,7 +325,7 @@
             </div>
             <div class="fx-meta-item">
                 <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 6v6l4 2"/></svg>
-                {{ fixture.phase_sport.sport.name }} · R{{ fixture.round_number }}
+                {{ fixture.phase_sport.sport.name }} &bull; R{{ fixture.round_number }}
             </div>
         </div>
     </div>
@@ -218,10 +342,15 @@
             <div class="fx-card">
                 <div class="fx-card-title">Match Info</div>
                 <div class="fx-info-row"><span class="k">Competition</span><span class="v">{{ fixture.phase_sport.phase.tournament.name }}</span></div>
-                <div class="fx-info-row"><span class="k">Stage</span><span class="v">{{ fixture.phase_sport.phase.get_stage_display }}{% if fixture.phase_sport.phase.scope_label %} · {{ fixture.phase_sport.phase.scope_label }}{% endif %}</span></div>
+                <div class="fx-info-row"><span class="k">Stage</span><span class="v">{{ fixture.phase_sport.phase.get_stage_display }}{% if fixture.phase_sport.phase.scope_label %} &bull; {{ fixture.phase_sport.phase.scope_label }}{% endif %}</span></div>
                 {% if fixture.group %}<div class="fx-info-row"><span class="k">Group</span><span class="v">Group {{ fixture.group.name }}</span></div>{% endif %}
-                <div class="fx-info-row"><span class="k">Round</span><span class="v">Round {{ fixture.round_number }}{% if fixture.leg > 1 %} · Leg {{ fixture.leg }}{% endif %}</span></div>
-                <div class="fx-info-row"><span class="k">Kickoff</span><span class="v">{{ fixture.kickoff_at|date:"D, d M Y · H:i"|default:"TBC" }}</span></div>
+                <div class="fx-info-row"><span class="k">Round</span><span class="v">Round {{ fixture.round_number }}{% if fixture.leg > 1 %} &bull; Leg {{ fixture.leg }}{% endif %}</span></div>
+                <div class="fx-info-row">
+                    <span class="k">Kickoff</span>
+                    <span class="v">
+                        {% if fixture.kickoff_at %}{{ fixture.kickoff_at|date:"D, d M Y" }} &bull; {{ fixture.kickoff_at|date:"H:i" }}{% else %}TBC{% endif %}
+                    </span>
+                </div>
                 <div class="fx-info-row"><span class="k">Venue</span><span class="v">{{ fixture.venue|default:"TBC" }}</span></div>
                 <div class="fx-info-row"><span class="k">Status</span><span class="v">{{ fixture.get_status_display }}</span></div>
                 {% if result and result.verified %}
@@ -230,31 +359,235 @@
             </div>
         </div>
 
+        <!-- --- LINEUPS TAB --- -->
         <div class="fx-pane" id="fx-pane-lineups">
-            <div class="fx-card">
-                <div class="fx-card-title">{{ fixture.home_team.name }} Squad</div>
-                {% for p in home_squad %}
+
+            <!-- HOME TEAM LINEUP -->
+            <div class="fx-card home-lineup">
+                <div class="fx-card-title">
+                    <span>{{ fixture.home_team.name }} Lineup</span>
+                    <span class="fx-formation-tag">{{ formation_label }}</span>
+                </div>
+
+                {% if home_lineup.gk or home_lineup.def or home_lineup.mid or home_lineup.att %}
+                <div class="fx-pitch-container">
+                    <div class="fx-pitch">
+                        <!-- Goalkeeper Row -->
+                        <div class="fx-pitch-row">
+                            {% for p in home_lineup.gk %}
+                            <div class="fx-player-node">
+                                <div class="fx-player-icon-wrap">
+                                    <div class="fx-player-shirt">{{ p.jersey_number }}</div>
+                                    {% if p.is_captain %}<span class="fx-captain-badge">C</span>{% endif %}
+                                    {% if p.goals > 0 or p.yellow_card > 0 or p.red_card > 0 %}
+                                    <div class="fx-node-event">
+                                        {% if p.goals > 0 %}<span class="fx-node-badge">&#9917;</span>{% endif %}
+                                        {% if p.yellow_card > 0 %}<span class="fx-node-badge card-yellow">&#9646;</span>{% endif %}
+                                        {% if p.red_card > 0 %}<span class="fx-node-badge card-red">&#9646;</span>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <span class="fx-player-name-lbl">{{ p.name|truncatechars:12 }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Defenders Row -->
+                        <div class="fx-pitch-row">
+                            {% for p in home_lineup.def %}
+                            <div class="fx-player-node">
+                                <div class="fx-player-icon-wrap">
+                                    <div class="fx-player-shirt">{{ p.jersey_number }}</div>
+                                    {% if p.is_captain %}<span class="fx-captain-badge">C</span>{% endif %}
+                                    {% if p.goals > 0 or p.yellow_card > 0 or p.red_card > 0 %}
+                                    <div class="fx-node-event">
+                                        {% if p.goals > 0 %}<span class="fx-node-badge">&#9917;</span>{% endif %}
+                                        {% if p.yellow_card > 0 %}<span class="fx-node-badge card-yellow">&#9646;</span>{% endif %}
+                                        {% if p.red_card > 0 %}<span class="fx-node-badge card-red">&#9646;</span>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <span class="fx-player-name-lbl">{{ p.name|truncatechars:12 }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Midfielders Row -->
+                        <div class="fx-pitch-row">
+                            {% for p in home_lineup.mid %}
+                            <div class="fx-player-node">
+                                <div class="fx-player-icon-wrap">
+                                    <div class="fx-player-shirt">{{ p.jersey_number }}</div>
+                                    {% if p.is_captain %}<span class="fx-captain-badge">C</span>{% endif %}
+                                    {% if p.goals > 0 or p.yellow_card > 0 or p.red_card > 0 %}
+                                    <div class="fx-node-event">
+                                        {% if p.goals > 0 %}<span class="fx-node-badge">&#9917;</span>{% endif %}
+                                        {% if p.yellow_card > 0 %}<span class="fx-node-badge card-yellow">&#9646;</span>{% endif %}
+                                        {% if p.red_card > 0 %}<span class="fx-node-badge card-red">&#9646;</span>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <span class="fx-player-name-lbl">{{ p.name|truncatechars:12 }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Attackers Row -->
+                        <div class="fx-pitch-row">
+                            {% for p in home_lineup.att %}
+                            <div class="fx-player-node">
+                                <div class="fx-player-icon-wrap">
+                                    <div class="fx-player-shirt">{{ p.jersey_number }}</div>
+                                    {% if p.is_captain %}<span class="fx-captain-badge">C</span>{% endif %}
+                                    {% if p.goals > 0 or p.yellow_card > 0 or p.red_card > 0 %}
+                                    <div class="fx-node-event">
+                                        {% if p.goals > 0 %}<span class="fx-node-badge">&#9917;</span>{% endif %}
+                                        {% if p.yellow_card > 0 %}<span class="fx-node-badge card-yellow">&#9646;</span>{% endif %}
+                                        {% if p.red_card > 0 %}<span class="fx-node-badge card-red">&#9646;</span>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <span class="fx-player-name-lbl">{{ p.name|truncatechars:12 }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state"><p>No players registered for this team yet.</p></div>
+                {% endif %}
+
+                <!-- Bench / Substitutes List -->
+                <div class="fx-card-title" style="background: #F8FAFC; border-top: 1px solid var(--line); font-size: 0.62rem;">Substitutes</div>
+                {% for p in home_lineup.bench %}
                 <div class="fx-squad-row">
-                    <div class="fx-squad-jersey">#{{ p.jersey_number }}</div>
+                    <div class="fx-squad-jersey">{{ p.jersey_number }}</div>
                     <div class="fx-squad-name">{{ p.name }}</div>
-                    <div class="fx-squad-pos">{{ p.get_position_display|default:"—" }}</div>
+                    <div class="fx-squad-pos">{{ p.get_position_display|default:"?" }}</div>
+                    <div class="fx-squad-events">
+                        {% if p.goals > 0 %}<span class="fx-event-pill">&#9917;</span>{% endif %}
+                        {% if p.yellow_card > 0 %}<span class="fx-event-pill card-yellow">&#9646;</span>{% endif %}
+                        {% if p.red_card > 0 %}<span class="fx-event-pill card-red">&#9646;</span>{% endif %}
+                    </div>
                 </div>
                 {% empty %}
-                <div class="empty-state"><p>No players registered for this team.</p></div>
+                <div class="empty-state"><p>No substitute players declared.</p></div>
                 {% endfor %}
             </div>
-            <div class="fx-card">
-                <div class="fx-card-title">{{ fixture.away_team.name }} Squad</div>
-                {% for p in away_squad %}
+
+            <!-- AWAY TEAM LINEUP -->
+            <div class="fx-card away-lineup">
+                <div class="fx-card-title">
+                    <span>{{ fixture.away_team.name }} Lineup</span>
+                    <span class="fx-formation-tag">{{ formation_label }}</span>
+                </div>
+
+                {% if away_lineup.gk or away_lineup.def or away_lineup.mid or away_lineup.att %}
+                <div class="fx-pitch-container">
+                    <div class="fx-pitch">
+                        <!-- Goalkeeper Row -->
+                        <div class="fx-pitch-row">
+                            {% for p in away_lineup.gk %}
+                            <div class="fx-player-node">
+                                <div class="fx-player-icon-wrap">
+                                    <div class="fx-player-shirt">{{ p.jersey_number }}</div>
+                                    {% if p.is_captain %}<span class="fx-captain-badge">C</span>{% endif %}
+                                    {% if p.goals > 0 or p.yellow_card > 0 or p.red_card > 0 %}
+                                    <div class="fx-node-event">
+                                        {% if p.goals > 0 %}<span class="fx-node-badge">&#9917;</span>{% endif %}
+                                        {% if p.yellow_card > 0 %}<span class="fx-node-badge card-yellow">&#9646;</span>{% endif %}
+                                        {% if p.red_card > 0 %}<span class="fx-node-badge card-red">&#9646;</span>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <span class="fx-player-name-lbl">{{ p.name|truncatechars:12 }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Defenders Row -->
+                        <div class="fx-pitch-row">
+                            {% for p in away_lineup.def %}
+                            <div class="fx-player-node">
+                                <div class="fx-player-icon-wrap">
+                                    <div class="fx-player-shirt">{{ p.jersey_number }}</div>
+                                    {% if p.is_captain %}<span class="fx-captain-badge">C</span>{% endif %}
+                                    {% if p.goals > 0 or p.yellow_card > 0 or p.red_card > 0 %}
+                                    <div class="fx-node-event">
+                                        {% if p.goals > 0 %}<span class="fx-node-badge">&#9917;</span>{% endif %}
+                                        {% if p.yellow_card > 0 %}<span class="fx-node-badge card-yellow">&#9646;</span>{% endif %}
+                                        {% if p.red_card > 0 %}<span class="fx-node-badge card-red">&#9646;</span>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <span class="fx-player-name-lbl">{{ p.name|truncatechars:12 }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Midfielders Row -->
+                        <div class="fx-pitch-row">
+                            {% for p in away_lineup.mid %}
+                            <div class="fx-player-node">
+                                <div class="fx-player-icon-wrap">
+                                    <div class="fx-player-shirt">{{ p.jersey_number }}</div>
+                                    {% if p.is_captain %}<span class="fx-captain-badge">C</span>{% endif %}
+                                    {% if p.goals > 0 or p.yellow_card > 0 or p.red_card > 0 %}
+                                    <div class="fx-node-event">
+                                        {% if p.goals > 0 %}<span class="fx-node-badge">&#9917;</span>{% endif %}
+                                        {% if p.yellow_card > 0 %}<span class="fx-node-badge card-yellow">&#9646;</span>{% endif %}
+                                        {% if p.red_card > 0 %}<span class="fx-node-badge card-red">&#9646;</span>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <span class="fx-player-name-lbl">{{ p.name|truncatechars:12 }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Attackers Row -->
+                        <div class="fx-pitch-row">
+                            {% for p in away_lineup.att %}
+                            <div class="fx-player-node">
+                                <div class="fx-player-icon-wrap">
+                                    <div class="fx-player-shirt">{{ p.jersey_number }}</div>
+                                    {% if p.is_captain %}<span class="fx-captain-badge">C</span>{% endif %}
+                                    {% if p.goals > 0 or p.yellow_card > 0 or p.red_card > 0 %}
+                                    <div class="fx-node-event">
+                                        {% if p.goals > 0 %}<span class="fx-node-badge">&#9917;</span>{% endif %}
+                                        {% if p.yellow_card > 0 %}<span class="fx-node-badge card-yellow">&#9646;</span>{% endif %}
+                                        {% if p.red_card > 0 %}<span class="fx-node-badge card-red">&#9646;</span>{% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <span class="fx-player-name-lbl">{{ p.name|truncatechars:12 }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="empty-state"><p>No players registered for this team yet.</p></div>
+                {% endif %}
+
+                <!-- Bench / Substitutes List -->
+                <div class="fx-card-title" style="background: #F8FAFC; border-top: 1px solid var(--line); font-size: 0.62rem;">Substitutes</div>
+                {% for p in away_lineup.bench %}
                 <div class="fx-squad-row">
-                    <div class="fx-squad-jersey">#{{ p.jersey_number }}</div>
+                    <div class="fx-squad-jersey">{{ p.jersey_number }}</div>
                     <div class="fx-squad-name">{{ p.name }}</div>
-                    <div class="fx-squad-pos">{{ p.get_position_display|default:"—" }}</div>
+                    <div class="fx-squad-pos">{{ p.get_position_display|default:"?" }}</div>
+                    <div class="fx-squad-events">
+                        {% if p.goals > 0 %}<span class="fx-event-pill">&#9917;</span>{% endif %}
+                        {% if p.yellow_card > 0 %}<span class="fx-event-pill card-yellow">&#9646;</span>{% endif %}
+                        {% if p.red_card > 0 %}<span class="fx-event-pill card-red">&#9646;</span>{% endif %}
+                    </div>
                 </div>
                 {% empty %}
-                <div class="empty-state"><p>No players registered for this team.</p></div>
+                <div class="empty-state"><p>No substitute players declared.</p></div>
                 {% endfor %}
             </div>
+
         </div>
 
         <div class="fx-pane" id="fx-pane-events">
@@ -262,7 +595,7 @@
                 <div class="fx-card-title">Goals</div>
                 {% for g in goals %}
                 <div class="fx-goal-row">
-                    <div class="fx-goal-minute">{% if g.minute %}{{ g.minute }}'{% else %}—{% endif %}</div>
+                    <div class="fx-goal-minute">{% if g.minute %}{{ g.minute }}'{% else %}?{% endif %}</div>
                     <div class="fx-goal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <circle cx="12" cy="12" r="9"/>
   <path d="M12 3v4.5M12 21v-4.5M3 12h4.5M21 12h-4.5"/>
@@ -282,16 +615,13 @@
                 <div class="fx-card-title">Cards</div>
                 {% for c in cards %}
                 <div class="fx-goal-row">
-                    <div class="fx-goal-minute">{% if c.minute %}{{ c.minute }}'{% else %}—{% endif %}</div>
+                    <div class="fx-goal-minute">{% if c.minute %}{{ c.minute }}'{% else %}?{% endif %}</div>
                     <div class="fx-goal-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-  <!-- Change fill="currentColor" to fill="#FFD700" for Yellow or fill="#FF3333" for Red -->
   <rect x="6" y="3" width="12" height="18" rx="2" transform="rotate(10 12 12)" fill="currentColor"/>
-</svg>
 </svg></div>
                     <div>
                         <div class="fx-goal-scorer">{{ c.player.name }}</div>
                         <div class="fx-goal-assist">Card: {{ c.card_type }}</div>
-
                     </div>
                     <div class="fx-goal-team">{{ c.player.team.name }}</div>
                 </div>
@@ -310,7 +640,7 @@
                         <div>{{ f.home_team.name }} vs {{ f.away_team.name }}</div>
                         <div class="fx-h2h-date">{{ f.kickoff_at|date:"d M Y"|default:"Date unknown" }}</div>
                     </div>
-                    <div class="fx-h2h-score">{{ f.result.home_score }}–{{ f.result.away_score }}</div>
+                    <div class="fx-h2h-score">{{ f.result.home_score }}:{{ f.result.away_score }}</div>
                 </div>
                 {% empty %}
                 <div class="empty-state"><p>These teams haven't met before, or no prior results are recorded.</p></div>

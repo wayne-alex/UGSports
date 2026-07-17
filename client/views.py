@@ -691,12 +691,48 @@ def fixture_detail(request, pk):
         pk=pk
     )
 
-    home_squad = fixture.home_team.players.filter(tournament=fixture.phase_sport.phase.tournament).order_by(
-        'jersey_number')
-    away_squad = fixture.away_team.players.filter(tournament=fixture.phase_sport.phase.tournament).order_by(
-        'jersey_number')
+    current_tournament = fixture.phase_sport.phase.tournament
 
-    # Head-to-head: past completed meetings between these two teams, most recent first
+    # Query all registered players for both teams
+    home_players = list(fixture.home_team.players.filter(tournament=current_tournament).order_by('jersey_number'))
+    away_players = list(fixture.away_team.players.filter(tournament=current_tournament).order_by('jersey_number'))
+
+    def build_lineup_and_bench(players):
+        """
+        Splits a flat list of players into a 4-3-3 formation and places the rest on the bench.
+        Formation definition: 1 GK, 4 DEF, 3 MID, 3 ATT = 11 starters.
+        """
+        # Separate pool by position
+        gks = [p for p in players if p.position == 'GK']
+        defs = [p for p in players if p.position == 'DEF']
+        mids = [p for p in players if p.position == 'MID']
+        atts = [p for p in players if p.position == 'ATT']
+
+        # Slice the starters based on a 4-3-3 formation rule
+        starting_gk = gks[:1]
+        starting_def = defs[:4]
+        starting_mid = mids[:3]
+        starting_att = atts[:3]
+
+        # Everything left over goes to the bench
+        bench = gks[1:] + defs[4:] + mids[3:] + atts[3:]
+
+        # Sort bench by jersey number for clean presentation
+        bench.sort(key=lambda x: x.jersey_number)
+
+        return {
+            'gk': starting_gk,
+            'def': starting_def,
+            'mid': starting_mid,
+            'att': starting_att,
+            'bench': bench,
+            'all': players,
+        }
+
+    home_lineup = build_lineup_and_bench(home_players)
+    away_lineup = build_lineup_and_bench(away_players)
+
+    # Head-to-head calculations
     h2h = (
         Fixture.objects.filter(
             Q(home_team=fixture.home_team, away_team=fixture.away_team) |
@@ -713,8 +749,11 @@ def fixture_detail(request, pk):
         'result': getattr(fixture, 'result', None),
         'goals': list(fixture.goals.all()),
         'cards': list(fixture.cards.all()),
-        'home_squad': home_squad,
-        'away_squad': away_squad,
+        'formation_label': '4-3-3',  # Pass a visible label to your template tag
+
+        'home_lineup': home_lineup,
+        'away_lineup': away_lineup,
+
         'h2h': h2h,
     }
     return render(request, 'fixture_detail.html', context)
