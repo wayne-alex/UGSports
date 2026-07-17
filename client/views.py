@@ -853,12 +853,13 @@ def team_detail_api(request, team_id):
             'assists': p.assists,
             'yellow_card': p.yellow_card,
             'red_card': p.red_card,
+            'is_captain': p.is_captain,
         }
         for p in players_qs
     ]
 
     return JsonResponse({
-        'team': {'id': team.id, 'name': team.name, 'ward': team.ward.name if team.ward else ''},
+        'team': {'id': team.id, 'name': team.name, 'ward': team.ward.name if team.ward else '','home_ground':team.home_ground,'coach_name':team.coach_name,'coach_phone':team.coach_phone},
         'overview': {
             'played': played, 'won': won, 'drawn': drawn, 'lost': lost,
             'goals_for': gf, 'goals_against': ga, 'goal_difference': goal_difference,

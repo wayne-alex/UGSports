@@ -392,6 +392,7 @@ class Player(models.Model):
     name = models.CharField(max_length=120)
     team = models.ForeignKey(Team, on_delete=models.CASCADE, related_name='players')
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name='registered_players')
+    is_captain = models.BooleanField(default=False)
 
     position = models.CharField(max_length=3, choices=Position.choices, blank=True)
     jersey_number = models.PositiveSmallIntegerField()

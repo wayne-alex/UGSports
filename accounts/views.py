@@ -1275,12 +1275,12 @@ def manage_team(request, pk):
     if request.method == "POST":
         action = request.POST.get('action')
 
-        # Build the redirect target up front so every branch shares it —
-        # fixes the previous bug where only 'remove_player' defined it.
+        # Build the redirect target up front so every branch shares it
         redirect_url = reverse('manage_team', kwargs={'pk': team.pk})
         if from_phase_id:
             redirect_url += f"?from_phase={from_phase_id}"
 
+        # ------------------ EDIT TEAM DETAILS ------------------
         if action == 'edit_team':
             name = request.POST.get('name', '').strip()
             if not name:
@@ -1294,13 +1294,15 @@ def manage_team(request, pk):
                 log_audit_action(request.user, AuditLog.Action.UPDATE, team, request=request)
                 messages.success(request, "Team details updated successfully.")
 
+        # ------------------ ADD PLAYER ------------------
         elif action == 'add_player':
             if not tournament:
-                messages.error(request, "This team isn't entered into any tournament yet — add it to a phase first.")
+                messages.error(request, "This team isn't entered into any tournament yet. Add it to a phase first.")
             else:
                 name = request.POST.get('player_name', '').strip()
                 jersey_raw = request.POST.get('jersey_number', '').strip()
                 position = request.POST.get('position', '').strip()
+                is_captain = request.POST.get('is_captain') == 'on'
 
                 if not name or not jersey_raw:
                     messages.error(request, "Both name and jersey number are required.")
@@ -1313,17 +1315,54 @@ def manage_team(request, pk):
                         if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exists():
                             messages.error(request, f"Jersey number #{jersey} is already taken on this team.")
                         else:
+                            # Handle singular captain policy
+                            if is_captain:
+                                team.players.filter(is_captain=True).update(is_captain=False)
+
                             player = Player.objects.create(
                                 team=team,
                                 tournament=tournament,
                                 name=name,
                                 jersey_number=jersey,
                                 position=position,
+                                is_captain=is_captain,
                                 created_by=request.user,
                             )
                             log_audit_action(request.user, AuditLog.Action.CREATE, player, request=request)
                             messages.success(request, f"{name} added to the squad.")
 
+        # ------------------ EDIT PLAYER ------------------
+        elif action == 'edit_player':
+            player = get_object_or_404(Player, pk=request.POST.get('player_id'), team=team)
+            name = request.POST.get('player_name', '').strip()
+            jersey_raw = request.POST.get('jersey_number', '').strip()
+            position = request.POST.get('position', '').strip()
+            is_captain = request.POST.get('is_captain') == 'on'
+
+            if not name or not jersey_raw:
+                messages.error(request, "Both name and jersey number are required.")
+            else:
+                try:
+                    jersey = int(jersey_raw)
+                except ValueError:
+                    messages.error(request, "Jersey number must be a whole number.")
+                else:
+                    if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exclude(pk=player.pk).exists():
+                        messages.error(request, f"Jersey number #{jersey} is already taken on this team.")
+                    else:
+                        # Handle singular captain policy
+                        if is_captain:
+                            team.players.filter(is_captain=True).update(is_captain=False)
+
+                        player.name = name
+                        player.jersey_number = jersey
+                        player.position = position
+                        player.is_captain = is_captain
+                        player.save()
+                        log_audit_action(request.user, AuditLog.Action.UPDATE, player, request=request)
+                        messages.success(request, f"Updated player {name} successfully.")
+
+        # ------------------ REMOVE PLAYER ------------------
         elif action == 'remove_player':
             player = get_object_or_404(Player, pk=request.POST.get('player_id'), team=team)
             player_name = player.name
@@ -1331,9 +1370,10 @@ def manage_team(request, pk):
             log_audit_action(request.user, AuditLog.Action.DELETE, player, request=request)
             messages.success(request, f"Removed {player_name} from the roster.")
 
+        # ------------------ BULK CSV IMPORT ------------------
         elif action == 'bulk_add_players':
             if not tournament:
-                messages.error(request, "This team isn't entered into any tournament yet — add it to a phase first.")
+                messages.error(request, "This team isn't entered into any tournament yet. Add it to a phase first.")
             else:
                 csv_file = request.FILES.get('csv_file')
                 if not csv_file:
@@ -1344,7 +1384,7 @@ def manage_team(request, pk):
                     try:
                         decoded = csv_file.read().decode('utf-8-sig')
                     except UnicodeDecodeError:
-                        messages.error(request, "Couldn't read that file — please save it as UTF-8 CSV and try again.")
+                        messages.error(request, "Couldn't read that file. Please save it as UTF-8 CSV and try again.")
                     else:
                         reader = csv.DictReader(StringIO(decoded))
                         headers = {h.strip().lower() for h in (reader.fieldnames or [])}
@@ -1361,7 +1401,7 @@ def manage_team(request, pk):
                             to_create = []
                             errors = []
 
-                            for i, row in enumerate(reader, start=2):  # row 2 = first data row (row 1 is header)
+                            for i, row in enumerate(reader, start=2):
                                 row = {k.strip().lower(): (v or '').strip() for k, v in row.items()}
                                 name = row.get('name', '')
                                 jersey_raw = row.get('jersey_number', '')
@@ -1380,13 +1420,14 @@ def manage_team(request, pk):
                                     errors.append(f"Row {i}: jersey #{jersey} is already taken.")
                                     continue
                                 if position and position not in valid_positions:
-                                    errors.append(f"Row {i}: unknown position '{position}' — left blank.")
+                                    errors.append(f"Row {i}: unknown position '{position}' - left blank.")
                                     position = ''
 
                                 to_create.append(Player(
                                     team=team, tournament=tournament, name=name,
                                     jersey_number=jersey, position=position,
                                     national_id=national_id, created_by=request.user,
+                                    is_captain=False # CSV bulk creates are not marked as captain by default
                                 ))
                                 seen_in_file.add(jersey)
 

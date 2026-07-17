@@ -30,6 +30,22 @@
     .team-stat-row:active { background: #F1F5F9; }
     .team-stat-row.filtered-out { display: none; }
 
+    .team-stat-ground {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.68rem;
+        color: var(--ink-faint);
+        margin-top: 2px;
+    }
+    .team-stat-ground svg {
+        width: 10px; height: 10px;
+        stroke: var(--ink-faint);
+        stroke-width: 2.4;
+        fill: none;
+        flex-shrink: 0;
+    }
+
     /* ---------- overlay ---------- */
     .team-overlay-backdrop {
         position: fixed; inset: 0;
@@ -71,10 +87,31 @@
         display: flex; align-items: center; justify-content: center;
         cursor: pointer;
         float: right;
+        transition: background 0.15s ease;
     }
+    .team-overlay-close:hover { background: rgba(255,255,255,0.25); }
     .team-overlay-close svg { width: 15px; height: 15px; stroke: #fff; stroke-width: 2.4; }
-    .team-overlay-name { font-family: 'Space Grotesk', sans-serif; font-size: 1.25rem; font-weight: 700; margin-top: 12px; }
-    .team-overlay-ward { font-size: 0.8rem; color: rgba(255,255,255,0.7); margin-top: 3px; }
+
+    .to-header-main {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 16px;
+    }
+    .to-avatar {
+        width: 54px; height: 54px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.16);
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        display: flex; align-items: center; justify-content: center;
+        font-family: 'Space Grotesk', sans-serif;
+        font-weight: 800;
+        font-size: 1.05rem;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
+    }
+    .team-overlay-name { font-family: 'Space Grotesk', sans-serif; font-size: 1.2rem; font-weight: 700; line-height: 1.2; }
+    .team-overlay-ward { font-size: 0.8rem; color: rgba(255,255,255,0.72); margin-top: 3px; }
 
     .team-overlay-body { padding: 20px 22px 40px; }
 
@@ -85,6 +122,46 @@
         margin: 22px 0 10px;
     }
     .to-section-title:first-child { margin-top: 0; }
+
+    /* ---- team info (coach / ground) ---- */
+    .to-info-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .to-info-row {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 12px 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    .to-info-icon {
+        width: 36px; height: 36px;
+        border-radius: 10px;
+        background: rgba(27, 67, 50, 0.08);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+    .to-info-icon svg { width: 17px; height: 17px; stroke: var(--pitch); stroke-width: 2.1; fill: none; }
+    .to-info-text { flex: 1; min-width: 0; }
+    .to-info-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-faint); }
+    .to-info-value { font-size: 0.86rem; font-weight: 600; color: var(--ink); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .to-info-value.muted { color: var(--ink-faint); font-weight: 500; font-style: italic; }
+    .to-info-call {
+        width: 34px; height: 34px;
+        border-radius: 50%;
+        background: var(--pitch);
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        text-decoration: none;
+        transition: transform 0.1s ease, background 0.15s ease;
+    }
+    .to-info-call:hover { background: var(--pitch-light); }
+    .to-info-call:active { transform: scale(0.92); }
+    .to-info-call svg { width: 15px; height: 15px; stroke: #fff; stroke-width: 2.3; fill: none; }
 
     .to-stats-grid {
         display: grid;
@@ -164,10 +241,49 @@
         flex-shrink: 0;
     }
     .to-player-name { font-size: 0.82rem; font-weight: 600; flex: 1; }
-    .to-player-pos { font-size: 0.68rem; color: var(--ink-soft); }
+    .to-player-pos { font-size: 0.68rem; color: var(--ink-soft); display: flex; align-items: center; gap: 5px; }
     .to-player-goals { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 700; color: var(--pitch); width: 24px; text-align: right; }
 
+    .to-card-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 13px;
+        height: 15px;
+        border-radius: 2px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.58rem;
+        font-weight: 700;
+        color: #fff;
+        padding: 0 2px;
+    }
+    .to-card-chip.yellow { background: #E8B923; }
+    .to-card-chip.red { background: var(--rust); }
+
     .to-loading { text-align: center; padding: 40px 0; color: var(--ink-soft); font-size: 0.82rem; }
+    .to-captain-badge {
+        display: inline-flex;
+        align-items: center;
+        background: #FEF3C7; /* Amber soft background */
+        color: #B45309;      /* Amber dark text */
+        font-size: 0.64rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        padding: 1px 5px;
+        border-radius: 4px;
+        margin-left: 6px;
+        letter-spacing: 0.3px;
+        border: 1px solid rgba(180, 83, 9, 0.15);
+        vertical-align: middle;
+    }
+
+    /* Highlighted player row style for Captains */
+    .to-player-row.is-captain {
+        background: rgba(254, 243, 199, 0.15);
+        border-radius: 8px;
+        padding-left: 6px;
+        padding-right: 6px;
+    }
 </style>
 
 <div class="sports-card" style="background:none; border:none; box-shadow:none; margin-bottom:0;">
@@ -180,7 +296,16 @@
 <div class="sports-card">
     {% for team in teams %}
     <div class="team-stat-row" onclick="TeamOverlay.open({{ team.id }})" data-team-name="{{ team.name|lower }}">
-        <div class="team-stat-meta"><div class="name">{{ team.name }}</div><div class="ward">{{ team.ward.name }} Ward</div></div>
+        <div class="team-stat-meta">
+            <div class="name">{{ team.name }}</div>
+            <div class="ward">{{ team.ward.name }} Ward</div>
+            {% if team.home_ground %}
+            <div class="team-stat-ground">
+                <svg viewBox="0 0 24 24"><path d="M12 22s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="11" r="2.4"/></svg>
+                {{ team.home_ground }}
+            </div>
+            {% endif %}
+        </div>
         <div class="team-stat-figs">
             <div class="team-stat-fig"><div class="v">{{ team.player_count }}</div><div class="k">Squad</div></div>
             <div class="team-stat-fig"><div class="v">{{ team.total_goals|default:0 }}</div><div class="k">Goals</div></div>
@@ -197,8 +322,13 @@
             <button class="team-overlay-close" onclick="TeamOverlay.close()">
                 <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
-            <div class="team-overlay-name" id="to-name">&nbsp;</div>
-            <div class="team-overlay-ward" id="to-ward"></div>
+            <div class="to-header-main">
+                <div class="to-avatar" id="to-avatar">--</div>
+                <div>
+                    <div class="team-overlay-name" id="to-name">&nbsp;</div>
+                    <div class="team-overlay-ward" id="to-ward"></div>
+                </div>
+            </div>
         </div>
         <div class="team-overlay-body" id="to-body">
             <div class="to-loading">Loading team...</div>
@@ -217,11 +347,19 @@
             });
         },
 
+        _initials(name) {
+            if (!name) return '--';
+            const words = name.trim().split(/\s+/).filter(Boolean);
+            if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+            return (words[0][0] + words[1][0]).toUpperCase();
+        },
+
         async open(teamId) {
             const backdrop = document.getElementById('team-overlay-backdrop');
             const body = document.getElementById('to-body');
             document.getElementById('to-name').textContent = 'Loading...';
             document.getElementById('to-ward').textContent = '';
+            document.getElementById('to-avatar').textContent = '--';
             body.innerHTML = '<div class="to-loading">Loading team...</div>';
             backdrop.classList.add('open');
             document.body.style.overflow = 'hidden';
@@ -251,6 +389,7 @@
         _render(data) {
             document.getElementById('to-name').textContent = data.team.name;
             document.getElementById('to-ward').textContent = data.team.ward + ' Ward';
+            document.getElementById('to-avatar').textContent = this._initials(data.team.name);
 
             const ov = data.overview;
             const formHtml = data.recent_form.length
@@ -287,17 +426,57 @@
 
             const playersHtml = data.players.length
                 ? data.players.map(p => `
-                    <div class="to-player-row">
+                    <div class="to-player-row ${p.is_captain ? 'is-captain' : ''}">
                         <div class="to-player-jersey">#${p.jersey_number}</div>
-                        <div>
-                            <div class="to-player-name">${this._esc(p.name)}</div>
-                            <div class="to-player-pos">${this._esc(p.position)} &middot; ${p.assists} assists &middot; ${p.yellow_card}🟨 ${p.red_card}🟥</div>
+                        <div style="flex:1;min-width:0;">
+                            <div class="to-player-name" style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                                ${this._esc(p.name)}
+                                ${p.is_captain ? `<span class="to-captain-badge" title="Team Captain">Captain</span>` : ''}
+                            </div>
+                            <div class="to-player-pos">
+                                <span>${this._esc(p.position)} &middot; ${p.assists} ${p.assists === 1 ? 'assist' : 'assists'}</span>
+                                ${p.yellow_card ? `<span class="to-card-chip yellow">${p.yellow_card}</span>` : ''}
+                                ${p.red_card ? `<span class="to-card-chip red">${p.red_card}</span>` : ''}
+                            </div>
                         </div>
                         <div class="to-player-goals">${p.goals}</div>
                     </div>`).join('')
                 : `<p style="font-size:0.8rem;color:var(--ink-soft);">No players registered.</p>`;
 
+            const ground = data.team.home_ground;
+            const coach = data.team.coach_name;
+            const coachPhone = data.team.coach_phone;
+
+            const infoHtml = `
+                <div class="to-info-list">
+                    <div class="to-info-row">
+                        <div class="to-info-icon">
+                            <svg viewBox="0 0 24 24"><path d="M12 22s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z"/><circle cx="12" cy="11" r="2.4"/></svg>
+                        </div>
+                        <div class="to-info-text">
+                            <div class="to-info-label">Home Ground</div>
+                            <div class="to-info-value ${ground ? '' : 'muted'}">${ground ? this._esc(ground) : 'Not set'}</div>
+                        </div>
+                    </div>
+                    <div class="to-info-row">
+                        <div class="to-info-icon">
+                            <svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 10-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+                        </div>
+                        <div class="to-info-text">
+                            <div class="to-info-label">Head Coach</div>
+                            <div class="to-info-value ${coach ? '' : 'muted'}">${coach ? this._esc(coach) : 'Not assigned'}</div>
+                        </div>
+                        ${coachPhone ? `
+                        <a class="to-info-call" href="tel:${this._esc(coachPhone)}" title="Call coach">
+                            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+                        </a>` : ''}
+                    </div>
+                </div>`;
+
             document.getElementById('to-body').innerHTML = `
+                <div class="to-section-title">Team Info</div>
+                ${infoHtml}
+
                 <div class="to-section-title">Overview</div>
                 <div class="to-stats-grid">
                     <div class="to-stat"><div class="v">${ov.played}</div><div class="k">Played</div></div>
