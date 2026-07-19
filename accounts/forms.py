@@ -261,3 +261,27 @@ class SubcountyTournamentForm(forms.ModelForm):
         if start and end and end < start:
             raise forms.ValidationError("End date can't be before the start date.")
         return cleaned
+
+
+class SingleFixtureForm(forms.ModelForm):
+    class Meta:
+        model = Fixture
+        fields = ['group', 'home_team', 'away_team', 'round_number', 'venue', 'kickoff_at', 'status']
+        widgets = {'kickoff_at': forms.DateTimeInput(attrs={'type': 'datetime-local'})}
+
+    def __init__(self, *args, phase_sport=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if phase_sport:
+            self.fields['group'].queryset = phase_sport.groups.all()
+            team_ids = PhaseEntry.objects.filter(
+                phase=phase_sport.phase
+            ).values_list('team_id', flat=True)
+            teams = Team.objects.filter(id__in=team_ids)
+            self.fields['home_team'].queryset = teams
+            self.fields['away_team'].queryset = teams
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('home_team') and cleaned.get('home_team') == cleaned.get('away_team'):
+            raise forms.ValidationError("A team cannot play itself.")
+        return cleaned

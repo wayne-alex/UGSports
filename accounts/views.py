@@ -11,7 +11,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import ProtectedError, Count
+from django.db.models import ProtectedError, Count, Model
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -23,9 +23,10 @@ from django.views.decorators.http import require_POST
 from accounts.decorators import superadmin_admin_required, ward_admin_required, subcounty_admin_required
 from accounts.fixture_generator import FixtureGenerator
 from accounts.forms import TournamentForm, PlayerForm, TeamForm, PhaseForm, FixtureGenerationForm, FixtureEditForm, \
-    ProfileForm, WardAdminProfileForm, FixtureForm, WardTournamentForm, SubcountyTeamForm, SubcountyTournamentForm
+    ProfileForm, WardAdminProfileForm, FixtureForm, WardTournamentForm, SubcountyTeamForm, SubcountyTournamentForm, \
+    SingleFixtureForm
 from accounts.models import AuditLog, Sport, SubCounty, Ward, NewsPost, NewsComment, Tournament, Team, Player, Result, \
-    Phase, PhaseEntry, Fixture, PhaseSport, Goal, User, Card
+    Phase, PhaseEntry, Fixture, PhaseSport, Goal, User, Card, Group
 from accounts.services import resolve_next_round, create_next_round_fixtures
 
 
@@ -932,6 +933,75 @@ def GenerateFixturesView(request, pk):
         form = FixtureGenerationForm()
 
     return render(request, 'superadmin_generate_fixtures.html', {'form': form, 'phase': phase})
+
+
+@superadmin_admin_required
+@login_required(login_url='login_admin')
+def FixtureCreateView(request, phase_pk):
+    phase = get_object_or_404(Phase, pk=phase_pk)
+    phase_sport = get_object_or_404(PhaseSport,phase=phase)
+
+    if request.method == 'POST':
+        # 1. Bulk CSV import — columns: group,home_team,away_team,round_number,venue,kickoff_at
+        if 'csv_file' in request.FILES:
+            data = request.FILES['csv_file'].read().decode('utf-8')
+            reader = csv.DictReader(io.StringIO(data))
+
+            entry_qs = PhaseEntry.objects.filter(phase=phase).select_related('team')
+            teams_by_name = {e.team.name.strip().lower(): e.team for e in entry_qs}
+            groups_by_name = {g.name.strip().lower(): g for g in phase_sport.groups.all()}
+
+            created, errors = 0, []
+            with transaction.atomic():
+                for i, row in enumerate(reader, start=2):  # row 1 = header
+                    try:
+                        home = teams_by_name[row['home_team'].strip().lower()]
+                        away = teams_by_name[row['away_team'].strip().lower()]
+                        group = groups_by_name.get((row.get('group') or '').strip().lower())
+                        if home == away:
+                            raise ValueError("home_team and away_team are the same")
+                        fixture = Fixture(
+                            phase_sport=phase_sport,
+                            group=group,
+                            home_team=home,
+                            away_team=away,
+                            round_number=int(row['round_number']),
+                            venue=row.get('venue') or (group.name if group else ''),
+                            status=Fixture.Status.SCHEDULED,
+                        )
+                        fixture.full_clean()
+                        fixture.save()
+                        log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
+                        created += 1
+                    except KeyError as e:
+                        errors.append(f"Row {i}: unmatched team/column {e}")
+                    except Exception as e:
+                        errors.append(f"Row {i}: {e}")
+
+                if errors and not created:
+                    transaction.set_rollback(True)
+
+            for err in errors[:20]:
+                messages.warning(request, err)
+            if created:
+                messages.success(request, f"{created} fixtures imported.")
+            return redirect('phase_sport_detail', pk=phase_sport.pk)
+
+        # 2. Single fixture form
+        form = FixtureForm(request.POST, phase_sport=phase_sport)
+        if form.is_valid():
+            fixture = form.save(commit=False)
+            fixture.phase_sport = phase_sport
+            fixture.save()
+            log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
+            messages.success(request, "Fixture added.")
+            return redirect('phase_sport_detail', pk=phase_sport.pk)
+    else:
+        form = SingleFixtureForm(phase_sport=phase_sport)
+
+    return render(request, 'superadmin_fixture_create.html', {
+        'form': form, 'phase_sport': phase_sport, 'groups': Group.objects.filter(phase_sport=phase_sport),'phase':phase,
+    })
 
 
 @superadmin_admin_required

@@ -39,6 +39,7 @@ urlpatterns = [
     path('phase/<int:pk>/edit/', views.PhaseEditView, name='phase_edit'),
     path('phase/<int:pk>/delete/', views.PhaseDeleteView, name='phase_delete'),
     path('phase-sports/<int:phase_sport_pk>/next-round/', views.NextRoundBuilderView, name='next_round_builder'),
+    path('phase-sports/<int:phase_pk>/fixtures/new/', views.FixtureCreateView, name='fixture_create'),
     # Team
     path('teams/<int:pk>/manage/', views.manage_team, name='manage_team'),
 
@@ -82,7 +83,8 @@ urlpatterns = [
     path('subcounty/news/create/', views.subcounty_news_create, name='subcounty_news_create'),
     path('subcounty/news/<int:pk>/edit/', views.subcountynews_edit, name='subcounty_news_edit'),
     path('subcounty/news/<int:pk>/delete/', views.subcountynews_delete, name='subcounty_news_delete'),
-    path('subcounty/comment/<int:pk>/delete/', views.subcounty_news_comment_delete, name='subcounty_news_comment_delete'),
+    path('subcounty/comment/<int:pk>/delete/', views.subcounty_news_comment_delete,
+         name='subcounty_news_comment_delete'),
     path('subcounty/settings/', views.subcounty_account_settings, name='subcounty_account_settings'),
     path('subcounty/phases/<int:pk>/', views.subcounty_phase_detail, name='subcounty_phase_detail'),
     path('subcounty/phases/<int:phase_id>/add-fixture/', views.subcounty_add_fixture, name='subcounty_add_fixture'),
@@ -94,8 +96,10 @@ urlpatterns = [
          name='subcounty_phase_status_update'),
     path('subcounty/phases/<int:phase_pk>/teams/create/', views.subcounty_team_create, name='subcounty_team_create'),
     path('subcounty/teams/<int:pk>/manage/', views.subcounty_manage_team, name='subcounty_manage_team'),
-    path('subcounty/phases/<int:phase_pk>/teams/select/', views.SubcountyPhaseTeamSelectView, name='subcounty_phase_team_select'),
-    path('subconty/phase-entries/<int:entry_id>/promote/', views.SubcountyPromoteTeamView, name='subconty_promote_team'),
+    path('subcounty/phases/<int:phase_pk>/teams/select/', views.SubcountyPhaseTeamSelectView,
+         name='subcounty_phase_team_select'),
+    path('subconty/phase-entries/<int:entry_id>/promote/', views.SubcountyPromoteTeamView,
+         name='subconty_promote_team'),
     path('subcounty/fixtures/<int:fixture_pk>/result/', views.SubcountyResultEntryView, name='subcounty_result_entry'),
     path('subcounty/fixtures/<int:pk>/edit/', views.Subcountyedit_fixture_view, name='subcounty_edit_fixture'),
 
