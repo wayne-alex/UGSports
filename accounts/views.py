@@ -985,7 +985,7 @@ def FixtureCreateView(request, phase_pk):
                 messages.warning(request, err)
             if created:
                 messages.success(request, f"{created} fixtures imported.")
-            return redirect('phase_sport_detail', pk=phase_sport.pk)
+            return redirect('phase_detail', pk=phase_sport.pk)
 
         # 2. Single fixture form
         form = FixtureForm(request.POST, phase_sport=phase_sport)
@@ -995,7 +995,7 @@ def FixtureCreateView(request, phase_pk):
             fixture.save()
             log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
             messages.success(request, "Fixture added.")
-            return redirect('phase_sport_detail', pk=phase_sport.pk)
+            return redirect('phase_detail', pk=phase_sport.pk)
     else:
         form = SingleFixtureForm(phase_sport=phase_sport)
 
