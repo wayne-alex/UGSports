@@ -37,15 +37,22 @@ class TournamentForm(forms.ModelForm):
             self.add_error('ward', "Selected ward doesn't belong to the selected sub-county.")
         return cleaned
 
-
 class PhaseForm(forms.ModelForm):
+    fixture_format = forms.ChoiceField(
+        choices=PhaseSport.Format.choices,
+        initial=PhaseSport.Format.LEAGUE,
+        label="Fixture Format"
+    )
+    legs = forms.IntegerField(
+        initial=1,
+        min_value=1,
+        label="Legs / Rounds",
+        help_text="1 = Single round, 2 = Home & Away"
+    )
+
     class Meta:
         model = Phase
-        fields = ['stage', 'ward', 'sub_county', 'status', 'start_date', 'end_date']
-        widgets = {
-            'start_date': forms.DateInput(attrs={'type': 'date'}),
-            'end_date': forms.DateInput(attrs={'type': 'date'}),
-        }
+        fields = ['stage', 'ward', 'sub_county', 'start_date', 'end_date', 'status']
 
     def __init__(self, *args, **kwargs):
         self.tournament = kwargs.pop('tournament', None)
@@ -71,6 +78,7 @@ class PhaseForm(forms.ModelForm):
             if qs.exists():
                 raise forms.ValidationError("A phase for this stage and scope already exists in this tournament.")
         return cleaned
+
 
 class TeamForm(forms.ModelForm):
     class Meta:
@@ -98,10 +106,12 @@ class PlayerForm(forms.ModelForm):
                 phase_entries__phase__tournament=self.tournament
             ).distinct()
 
+
 class FixtureGenerationForm(forms.Form):
     sport = forms.ModelChoiceField(queryset=Sport.objects.filter(is_active=True), label="Sport")
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
-    duration = forms.IntegerField(initial=30, label="Duration (Days)", widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    duration = forms.IntegerField(initial=30, label="Duration (Days)",
+                                  widget=forms.NumberInput(attrs={'class': 'form-control'}))
     schedule_type = forms.ChoiceField(
         choices=[('daily', 'Daily — any day of the week'), ('weekends', 'Weekends only — Sat & Sun')],
         initial='daily',
@@ -110,11 +120,14 @@ class FixtureGenerationForm(forms.Form):
     format = forms.ChoiceField(choices=[
         ('league', 'League'),
         ('knockout', 'Knockout'),
-        ('group_knockout', 'Group + Knockout'),   # matches PhaseSport.Format exactly
+        ('group_knockout', 'Group + Knockout'),  # matches PhaseSport.Format exactly
     ], widget=forms.Select(attrs={'class': 'form-control', 'id': 'formatSelect'}))
-    legs = forms.ChoiceField(choices=[(1, 'Single Leg'), (2, 'Home & Away')], widget=forms.Select(attrs={'class': 'form-control'}))
+    legs = forms.ChoiceField(choices=[(1, 'Single Leg'), (2, 'Home & Away')],
+                             widget=forms.Select(attrs={'class': 'form-control'}))
     groups = forms.IntegerField(initial=4, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
-    qualify_per_group = forms.IntegerField(initial=2, required=False, widget=forms.NumberInput(attrs={'class': 'form-control'}))
+    qualify_per_group = forms.IntegerField(initial=2, required=False,
+                                           widget=forms.NumberInput(attrs={'class': 'form-control'}))
+
 
 class FixtureEditForm(forms.ModelForm):
     class Meta:
@@ -126,10 +139,12 @@ class FixtureEditForm(forms.ModelForm):
             'status': forms.Select(attrs={'class': 'form-control'}),
         }
 
+
 class ProfileForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email']
+
 
 class WardAdminProfileForm(forms.ModelForm):
     first_name = forms.CharField(max_length=150, required=True)
@@ -197,6 +212,7 @@ class FixtureForm(forms.ModelForm):
             raise ValidationError("A team cannot play against itself.")
         return cleaned_data
 
+
 class WardTournamentForm(forms.ModelForm):
     sports = forms.ModelMultipleChoiceField(
         queryset=Sport.objects.filter(is_active=True),
@@ -219,6 +235,7 @@ class WardTournamentForm(forms.ModelForm):
             raise forms.ValidationError("End date can't be before the start date.")
         return cleaned
 
+
 class SubcountyTeamForm(forms.ModelForm):
     class Meta:
         model = Team
@@ -229,6 +246,7 @@ class SubcountyTeamForm(forms.ModelForm):
         if sub_county is not None:
             self.fields['ward'].queryset = Ward.objects.filter(sub_county=sub_county)
         self.fields['sport'].queryset = Sport.objects.filter(is_active=True)
+
 
 class SubcountyTournamentForm(forms.ModelForm):
     sports = forms.ModelMultipleChoiceField(

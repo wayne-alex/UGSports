@@ -18,6 +18,48 @@
         <p>{{ groups.count|default:"0" }}<span>groups</span></p>
     </div>
 </div>
+<!-- ===== CREATE GROUP / ROUND ===== -->
+<div class="group-header-row">
+    <span class="group-header">Groups &amp; Rounds</span>
+</div>
+<div class="inline-form-panel active">
+    <div class="form-panel-title">Create Group or Knockout Round</div>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label for="group_name">Name</label>
+                <input type="text" id="group_name" name="group_name" placeholder="e.g. A, B, QF, SF, Final" required>
+                <span class="cell-sub" style="margin-top: 4px;">
+                    Use pool letters (A, B, C, D) for group stage, or round labels (QF, SF, Final) for knockout.
+                </span>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">
+                <svg viewBox="0 0 24 24" stroke-width="2.3"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Add Group
+            </button>
+        </div>
+    </form>
+</div>
+
+{% if groups %}
+<div class="group">
+    {% for g in groups %}
+    <div class="group-row">
+        <div class="row-left">
+            <div class="avatar-chip">{{ g.name|upper }}</div>
+            <div>
+                <div class="cell-main">{{ g.name }}</div>
+                <div class="cell-sub">{{ g.fixtures.count }} fixture{{ g.fixtures.count|pluralize }}</div>
+            </div>
+        </div>
+        <span class="badge pending">Group</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
 
 <!-- ===== SINGLE FIXTURE ===== -->
 <div class="inline-form-panel active">

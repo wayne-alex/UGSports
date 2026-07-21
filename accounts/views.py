@@ -2,6 +2,7 @@ import csv
 import io
 from datetime import timedelta
 from io import StringIO
+from itertools import combinations
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model, authenticate, login, update_session_auth_hash
@@ -569,8 +570,21 @@ def PhaseCreateView(request, tournament_pk):
             phase.tournament = tournament
             phase.created_by = request.user
             phase.save()
+
+            # Grab form choices
+            selected_format = form.cleaned_data['fixture_format']
+            selected_legs = form.cleaned_data['legs']
+
+            # Assign choices when auto-creating PhaseSport entries
             for sport in tournament.sports.all():
-                PhaseSport.objects.get_or_create(phase=phase, sport=sport)
+                PhaseSport.objects.get_or_create(
+                    phase=phase,
+                    sport=sport,
+                    defaults={
+                        'fixture_format': selected_format,
+                        'legs': selected_legs,
+                    }
+                )
 
             log_audit_action(request.user, AuditLog.Action.CREATE, phase, request=request)
             messages.success(request, f'{phase} was created.')
@@ -939,21 +953,35 @@ def GenerateFixturesView(request, pk):
 @login_required(login_url='login_admin')
 def FixtureCreateView(request, phase_pk):
     phase = get_object_or_404(Phase, pk=phase_pk)
-    phase_sport = get_object_or_404(PhaseSport,phase=phase)
+    phase_sport = get_object_or_404(PhaseSport, phase=phase)
 
     if request.method == 'POST':
-        # 1. Bulk CSV import — columns: group,home_team,away_team,round_number,venue,kickoff_at
+
+        # 1. Create a group/round label — used for both pools (A, B, C…) and
+        #    knockout rounds (QF, SF, Final). Fixture.group just needs a name to point at.
+        if 'group_name' in request.POST:
+            name = request.POST.get('group_name', '').strip()
+            if not name:
+                messages.error(request, "Group name is required.")
+            else:
+                group, was_created = Group.objects.get_or_create(phase_sport=phase_sport, name=name)
+                if was_created:
+                    log_audit_action(request.user, AuditLog.Action.CREATE, group, request=request)
+                    messages.success(request, f"Group '{name}' created.")
+                else:
+                    messages.info(request, f"Group '{name}' already exists.")
+            return redirect('fixture_create', phase_pk=phase.pk)
+
+        # 2. Bulk CSV import — columns: group,home_team,away_team,round_number,venue,kickoff_at
         if 'csv_file' in request.FILES:
             data = request.FILES['csv_file'].read().decode('utf-8')
             reader = csv.DictReader(io.StringIO(data))
-
             entry_qs = PhaseEntry.objects.filter(phase=phase).select_related('team')
             teams_by_name = {e.team.name.strip().lower(): e.team for e in entry_qs}
             groups_by_name = {g.name.strip().lower(): g for g in phase_sport.groups.all()}
-
             created, errors = 0, []
             with transaction.atomic():
-                for i, row in enumerate(reader, start=2):  # row 1 = header
+                for i, row in enumerate(reader, start=2):
                     try:
                         home = teams_by_name[row['home_team'].strip().lower()]
                         away = teams_by_name[row['away_team'].strip().lower()]
@@ -977,30 +1005,31 @@ def FixtureCreateView(request, phase_pk):
                         errors.append(f"Row {i}: unmatched team/column {e}")
                     except Exception as e:
                         errors.append(f"Row {i}: {e}")
-
                 if errors and not created:
                     transaction.set_rollback(True)
-
             for err in errors[:20]:
                 messages.warning(request, err)
             if created:
                 messages.success(request, f"{created} fixtures imported.")
-            return redirect('phase_detail', pk=phase_sport.pk)
+            return redirect('phase_detail', pk=phase.pk)
 
-        # 2. Single fixture form
-        form = FixtureForm(request.POST, phase_sport=phase_sport)
+        # 3. Single fixture form
+        form = SingleFixtureForm(request.POST, phase_sport=phase_sport)
         if form.is_valid():
             fixture = form.save(commit=False)
             fixture.phase_sport = phase_sport
             fixture.save()
             log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
             messages.success(request, "Fixture added.")
-            return redirect('phase_detail', pk=phase_sport.pk)
+            return redirect('phase_detail', pk=phase.pk)
     else:
         form = SingleFixtureForm(phase_sport=phase_sport)
 
     return render(request, 'superadmin_fixture_create.html', {
-        'form': form, 'phase_sport': phase_sport, 'groups': Group.objects.filter(phase_sport=phase_sport),'phase':phase,
+        'form': form,
+        'phase_sport': phase_sport,
+        'groups': Group.objects.filter(phase_sport=phase_sport),
+        'phase': phase,
     })
 
 
@@ -1600,6 +1629,76 @@ def account_settings(request):
         'password_form': password_form,
         'active_nav': 'settings',
     })
+
+
+@superadmin_admin_required
+@login_required(login_url='login_admin')
+@require_POST
+def save_groups_and_generate_fixtures(request, phase_sport_pk):
+    """
+    Expects JSON input:
+    {
+        "groups": [
+            {"name": "Group A", "team_ids": [1, 2, 3, 4]},
+            {"name": "Group B", "team_ids": [5, 6, 7, 8]}
+        ],
+        "generate_fixtures": true
+    }
+    """
+    phase_sport = get_object_or_404(PhaseSport, pk=phase_sport_pk)
+
+    try:
+        data = json.loads(request.body)
+        groups_data = data.get('groups', [])
+        generate_fixtures = data.get('generate_fixtures', True)
+
+        with transaction.atomic():
+            # 1. Update/Create Groups
+            existing_groups = {g.name: g for g in phase_sport.groups.all()}
+            active_group_ids = []
+
+            for g_info in groups_data:
+                group_name = g_info['name'].strip()
+                team_ids = g_info.get('team_ids', [])
+
+                group, _ = Group.objects.get_or_create(
+                    phase_sport=phase_sport,
+                    name=group_name
+                )
+                active_group_ids.append(group.id)
+
+                # Assign teams to this group via PhaseEntry
+                PhaseEntry.objects.filter(phase=phase_sport.phase, team_id__in=team_ids).update(group=group)
+
+                # 2. Auto-generate round-robin fixtures if requested
+                if generate_fixtures and len(team_ids) >= 2:
+                    # Clear existing scheduled fixtures for this group to prevent duplication
+                    Fixture.objects.filter(phase_sport=phase_sport, group=group,
+                                           status=Fixture.Status.SCHEDULED).delete()
+
+                    # Round-robin pairings
+                    pairings = list(combinations(team_ids, 2))
+                    legs = phase_sport.legs  # 1 for single, 2 for home & away
+
+                    for leg in range(1, legs + 1):
+                        for round_idx, (home_id, away_id) in enumerate(pairings, start=1):
+                            # Swap home/away on second leg
+                            if leg == 2:
+                                home_id, away_id = away_id, home_id
+
+                            Fixture.objects.create(
+                                phase_sport=phase_sport,
+                                group=group,
+                                home_team_id=home_id,
+                                away_team_id=away_id,
+                                round_number=((leg - 1) * len(pairings)) + round_idx,
+                                status=Fixture.Status.SCHEDULED
+                            )
+
+        return JsonResponse({'status': 'success', 'message': 'Groups and fixtures updated successfully!'})
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
 # WARD

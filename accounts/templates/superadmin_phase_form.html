@@ -1,15 +1,17 @@
 {% extends "superadmin_base.html" %}
-{% block title %}New Phase — UG Sports Admin{% endblock %}
+{% block title %}New Phase ? UG Sports Admin{% endblock %}
 {% block page_eyebrow %}{{ tournament.name }}{% endblock %}
 {% block page_title %}New Phase{% endblock %}
 {% block header_actions %}
 <a href="{% url 'tournament_detail' tournament.pk %}" class="btn-ghost">Cancel</a>
 {% endblock %}
+
 {% block content %}
 <div class="group" style="padding:24px;">
     {% if form.non_field_errors %}
     <div style="color:var(--rust); font-size:0.82rem; margin-bottom:12px;">{{ form.non_field_errors }}</div>
     {% endif %}
+
     <form method="post">
         {% csrf_token %}
         <div class="form-grid-columns">
@@ -34,10 +36,30 @@
                 <div style="color:var(--rust); font-size:0.75rem;">{{ form.sub_county.errors }}</div>
                 {% endif %}
             </div>
+
+            <!-- ADDED: Fixture Format Field -->
+            <div class="form-field-box">
+                <label for="{{ form.fixture_format.id_for_label }}">Fixture Format</label>
+                {{ form.fixture_format }}
+                {% if form.fixture_format.errors %}
+                <div style="color:var(--rust); font-size:0.75rem;">{{ form.fixture_format.errors }}</div>
+                {% endif %}
+            </div>
+
+            <!-- ADDED: Legs Field -->
+            <div class="form-field-box">
+                <label for="{{ form.legs.id_for_label }}">Legs (Rounds)</label>
+                {{ form.legs }}
+                {% if form.legs.errors %}
+                <div style="color:var(--rust); font-size:0.75rem;">{{ form.legs.errors }}</div>
+                {% endif %}
+            </div>
+
             <div class="form-field-box"><label>Start Date</label>{{ form.start_date }}</div>
             <div class="form-field-box"><label>End Date</label>{{ form.end_date }}</div>
         </div>
-        <div class="form-actions">
+
+        <div class="form-actions" style="margin-top: 24px;">
             <a href="{% url 'tournament_detail' tournament.pk %}" class="btn-ghost">Cancel</a>
             <button type="submit" class="btn-primary">Create Phase</button>
         </div>

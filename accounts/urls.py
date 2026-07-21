@@ -40,6 +40,8 @@ urlpatterns = [
     path('phase/<int:pk>/delete/', views.PhaseDeleteView, name='phase_delete'),
     path('phase-sports/<int:phase_sport_pk>/next-round/', views.NextRoundBuilderView, name='next_round_builder'),
     path('phase-sports/<int:phase_pk>/fixtures/new/', views.FixtureCreateView, name='fixture_create'),
+    path('phase-sport/<int:phase_sport_pk>/save-groups/', views.save_groups_and_generate_fixtures,
+         name='save_groups_and_fixtures'),
     # Team
     path('teams/<int:pk>/manage/', views.manage_team, name='manage_team'),
 
