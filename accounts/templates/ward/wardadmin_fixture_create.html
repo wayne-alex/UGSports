@@ -1,0 +1,135 @@
+{% extends "ward/wardadmin_base.html" %}
+{% block title %}Create Fixtures — UG Sports Admin{% endblock %}
+{% block page_eyebrow %}{{ phase }}{% endblock %}
+{% block page_title %}Create Fixtures{% endblock %}
+{% block header_actions %}
+<a href="{% url 'ward_tournament'  %}" class="btn-ghost">Cancel</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="group-header-row">
+    <span class="group-header">{{ phase_sport }}</span>
+</div>
+
+<div class="metrics-grid" style="margin-bottom: 24px;">
+    <div class="metric-card">
+        <h3>Pools</h3>
+        <p>{{ groups.count|default:"0" }}<span>groups</span></p>
+    </div>
+</div>
+<!-- ===== CREATE GROUP / ROUND ===== -->
+<div class="group-header-row">
+    <span class="group-header">Groups &amp; Rounds</span>
+</div>
+<div class="inline-form-panel active">
+    <div class="form-panel-title">Create Group or Knockout Round</div>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box">
+                <label for="group_name">Name</label>
+                <input type="text" id="group_name" name="group_name" placeholder="e.g. A, B, QF, SF, Final" required>
+                <span class="cell-sub" style="margin-top: 4px;">
+                    Use pool letters (A, B, C, D) for group stage, or round labels (QF, SF, Final) for knockout.
+                </span>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">
+                <svg viewBox="0 0 24 24" stroke-width="2.3"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Add Group
+            </button>
+        </div>
+    </form>
+</div>
+
+{% if groups %}
+<div class="group">
+    {% for g in groups %}
+    <div class="group-row">
+        <div class="row-left">
+            <div class="avatar-chip">{{ g.name|upper }}</div>
+            <div>
+                <div class="cell-main">{{ g.name }}</div>
+                <div class="cell-sub">{{ g.fixtures.count }} fixture{{ g.fixtures.count|pluralize }}</div>
+            </div>
+        </div>
+        <span class="badge pending">Group</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ===== SINGLE FIXTURE ===== -->
+<div class="inline-form-panel active">
+    <div class="form-panel-title">Add Single Fixture</div>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            {% for field in form %}
+            <div class="form-field-box">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                    <span style="color: var(--rust); font-size: 0.75rem;">{{ field.errors|striptags }}</span>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">
+                <svg viewBox="0 0 24 24" stroke-width="2.3"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                Save Fixture
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- ===== BULK CSV IMPORT ===== -->
+<div class="group-header-row">
+    <span class="group-header">Bulk Import</span>
+</div>
+<div class="inline-form-panel active">
+    <div class="form-panel-title">Import Fixtures from CSV</div>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box" style="grid-column: 1 / -1;">
+                <label for="csv_file">CSV file</label>
+                <input type="file" id="csv_file" name="csv_file" accept=".csv" required>
+                <span class="cell-sub" style="margin-top: 4px;">
+                    Columns: group, home_team, away_team, round_number, venue, kickoff_at
+                </span>
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">
+                <svg viewBox="0 0 24 24" stroke-width="2.3"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Import CSV
+            </button>
+        </div>
+    </form>
+</div>
+
+{% if groups %}
+<div class="group-header-row">
+    <span class="group-header">Pools in this Phase</span>
+</div>
+<div class="group">
+    {% for g in groups %}
+    <div class="group-row">
+        <div class="row-left">
+            <div class="avatar-chip">{{ g.name|slice:":2"|upper }}</div>
+            <div>
+                <div class="cell-main">{{ g.name }}</div>
+                <div class="cell-sub">{{ g.fixtures.count }} fixture{{ g.fixtures.count|pluralize }}</div>
+            </div>
+        </div>
+        <span class="badge pending">Pool</span>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "ward/wardadmin_base.html" %}
+{% block title %}Edit Tournament | {{ tournament.name }}{% endblock %}
+{% block page_eyebrow %}{{ tournament.ward.name }} Ward{% endblock %}
+{% block page_title %}Edit Tournament{% endblock %}
+
+{% block content %}
+<div class="workspace-wrapper" style="background:#fff; border:1px solid var(--line,#e2e8f0); border-radius:12px; padding:24px; max-width:640px;">
+    {% if form.non_field_errors %}
+        <div style="color:var(--rust); font-size:0.85rem; margin-bottom:14px;">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-grid-columns">
+            <div class="form-field-box"><label>Name</label>{{ form.name }}{{ form.name.errors }}</div>
+            <div class="form-field-box"><label>Season</label>{{ form.season }}{{ form.season.errors }}</div>
+            <div class="form-field-box"><label>Status</label>{{ form.status }}{{ form.status.errors }}</div>
+            <div class="form-field-box"><label>Start Date</label>{{ form.start_date }}{{ form.start_date.errors }}</div>
+            <div class="form-field-box"><label>End Date</label>{{ form.end_date }}{{ form.end_date.errors }}</div>
+        </div>
+        <div class="form-field-box" style="margin-bottom:16px;">
+            <label>Sports</label>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; margin-top:4px;">
+                {% for checkbox in form.sports %}
+                <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:500;">
+                    {{ checkbox.tag }} {{ checkbox.choice_label }}
+                </label>
+                {% endfor %}
+            </div>
+            {{ form.sports.errors }}
+        </div>
+        <div class="form-actions" style="display:flex; gap:10px; justify-content:flex-end;">
+            <a href="{% url 'ward_tournament' %}?tournament_id={{ tournament.pk }}" class="btn-ghost">Cancel</a>
+            <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

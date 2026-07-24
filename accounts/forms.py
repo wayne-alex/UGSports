@@ -1,8 +1,10 @@
 from django import forms
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 
-from .models import Tournament, Sport, Phase, Team, Player, PhaseEntry, Fixture, PhaseSport, Group, Ward
+from .models import Tournament, Sport, Phase, Team, Player, PhaseEntry, Fixture, PhaseSport, Group, Ward, SubCounty
+
+User = get_user_model()
 
 
 class TournamentForm(forms.ModelForm):
@@ -36,6 +38,7 @@ class TournamentForm(forms.ModelForm):
         if ward and sub_county and ward.sub_county_id != sub_county.id:
             self.add_error('ward', "Selected ward doesn't belong to the selected sub-county.")
         return cleaned
+
 
 class PhaseForm(forms.ModelForm):
     fixture_format = forms.ChoiceField(
@@ -236,6 +239,70 @@ class WardTournamentForm(forms.ModelForm):
         return cleaned
 
 
+class WardPhaseForm(forms.ModelForm):
+    fixture_format = forms.ChoiceField(
+        choices=PhaseSport.Format.choices,
+        initial=PhaseSport.Format.LEAGUE,
+        label="Fixture Format"
+    )
+    legs = forms.IntegerField(
+        initial=1,
+        min_value=1,
+        label="Legs / Rounds",
+        help_text="1 = Single round, 2 = Home & Away"
+    )
+
+    class Meta:
+        model = Phase
+        fields = ['stage', 'ward', 'start_date', 'end_date', 'status']
+
+    def __init__(self, *args, **kwargs):
+        self.tournament = kwargs.pop('tournament', None)
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if self.user and getattr(self.user, 'ward', None):
+            ward = self.user.ward
+            # Lock ward to the admin's own ward — no picker needed.
+            self.fields['ward'].queryset = Ward.objects.filter(pk=ward.pk)
+            self.fields['ward'].initial = ward
+            self.fields['ward'].disabled = True
+            # Ward admins only ever create Ward-stage phases.
+            self.fields['stage'].choices = [
+                (Phase.Stage.WARD, dict(Phase.Stage.choices)[Phase.Stage.WARD])
+            ]
+            self.fields['stage'].initial = Phase.Stage.WARD
+
+        # Lock stage/ward on edit too — scope shouldn't change after creation.
+        if self.instance and self.instance.pk:
+            self.fields['stage'].disabled = True
+            self.fields['ward'].disabled = True
+
+    def clean(self):
+        cleaned = super().clean()
+
+        # Defense in depth: force scope back to the admin's own ward
+        # regardless of what was (or wasn't) submitted for disabled fields.
+        if self.user and getattr(self.user, 'ward', None):
+            cleaned['ward'] = self.user.ward
+            cleaned['stage'] = Phase.Stage.WARD
+
+        stage = cleaned.get('stage')
+        ward = cleaned.get('ward')
+
+        if stage == Phase.Stage.WARD and not ward:
+            self.add_error('ward', "A Ward Phase must have a ward selected.")
+
+        if self.tournament and stage:
+            qs = Phase.objects.filter(tournament=self.tournament, stage=stage, ward=ward)
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError("A phase for this ward already exists in this tournament.")
+
+        return cleaned
+
+
 class SubcountyTeamForm(forms.ModelForm):
     class Meta:
         model = Team
@@ -302,4 +369,49 @@ class SingleFixtureForm(forms.ModelForm):
         cleaned = super().clean()
         if cleaned.get('home_team') and cleaned.get('home_team') == cleaned.get('away_team'):
             raise forms.ValidationError("A team cannot play itself.")
+        return cleaned
+
+
+class SubCountyPhaseForm(PhaseForm):
+    """
+    Used when a Sub-County Admin creates a Phase.
+    Restricts sub_county to their own, and ward choices to
+    wards that belong to that sub_county.
+    """
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if self.user and self.user.role == User.Role.SUB_COUNTY_ADMIN:
+            sub_county = self.user.sub_county
+
+            # Lock sub_county to the admin's own — no dropdown needed,
+            # but keep it in the form so clean()/save() still work.
+            self.fields['sub_county'].queryset = SubCounty.objects.filter(pk=sub_county.pk)
+            self.fields['sub_county'].initial = sub_county
+            self.fields['sub_county'].disabled = True
+
+            # Only show wards within this sub-county.
+            self.fields['ward'].queryset = Ward.objects.filter(sub_county=sub_county)
+
+            # A sub-county admin only creates Sub-County or Ward phases,
+            # never County/Final.
+            self.fields['stage'].choices = [
+                (val, label) for val, label in Phase.Stage.choices
+                if val in (Phase.Stage.SUB_COUNTY, Phase.Stage.WARD)
+            ]
+
+    def clean(self):
+        cleaned = super().clean()
+
+        # Defense in depth: even if someone tampers with the payload,
+        # force sub_county back to the admin's own scope.
+        if self.user and self.user.role == User.Role.SUB_COUNTY_ADMIN:
+            cleaned['sub_county'] = self.user.sub_county
+
+            ward = cleaned.get('ward')
+            if ward and ward.sub_county_id != self.user.sub_county_id:
+                self.add_error('ward', "You can only select a ward within your own sub-county.")
+
         return cleaned

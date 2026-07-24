@@ -1,0 +1,27 @@
+{% extends "ward/wardadmin_base.html" %}
+{% block title %}{% if phase %}Edit Phase{% else %}Create Phase{% endif %} | {{ tournament.name }}{% endblock %}
+{% block page_eyebrow %}{{ tournament.name }}{% endblock %}
+{% block page_title %}{% if phase %}Edit Ward Phase{% else %}Create Ward Phase{% endif %}{% endblock %}
+
+{% block content %}
+<div class="workspace-wrapper" style="background:#fff; border:1px solid var(--line,#e2e8f0); border-radius:12px; padding:24px; max-width:640px;">
+    {% if form.non_field_errors %}
+        <div style="color:var(--rust); font-size:0.85rem; margin-bottom:14px;">{{ form.non_field_errors }}</div>
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="form-field-box" style="margin-bottom:16px;">
+            <label>{{ field.label }}</label>
+            {{ field }}
+            {% if field.help_text %}<p style="font-size:0.75rem; color:#64748b; margin-top:4px;">{{ field.help_text }}</p>{% endif %}
+            {{ field.errors }}
+        </div>
+        {% endfor %}
+        <div class="form-actions" style="display:flex; gap:10px; justify-content:flex-end; margin-top:8px;">
+            <a href="{% url 'ward_tournament' %}?tournament_id={{ tournament.pk }}" class="btn-ghost">Cancel</a>
+            <button type="submit" class="btn-primary">{% if phase %}Save Changes{% else %}Create Phase{% endif %}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

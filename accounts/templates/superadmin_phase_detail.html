@@ -176,14 +176,14 @@
     <div class="group-header-row">
         <h3 class="group-header">{{ sport.name }}</h3>
         {% if ps and ps.fixtures_generated %}
-            <a href="{% url 'generate_fixtures' phase.pk %}?sport_id={{ sport.id }}" class="btn-ghost">+ Regenerate Fixtures</a>
-        <a href="{% url 'fixture_create' phase.pk %}?sport_id={{ sport.id }}" class="btn-ghost">+ Create Fixtures</a>
+            <a href="{% url 'subcoounty_generate_fixtures' phase.pk %}?sport_id={{ sport.id }}" class="btn-ghost">+ Regenerate Fixtures</a>
+        <a href="{% url 'subcounty_fixture_create' phase.pk %}?sport_id={{ sport.id }}" class="btn-ghost">+ Create Fixtures</a>
         {% else %}
             <a href="{% url 'generate_fixtures' phase.pk %}?sport_id={{ sport.id }}" class="btn-ghost">+ Generate Fixtures</a>
-            <a href="{% url 'fixture_create' phase.pk %}?sport_id={{ sport.id }}" class="btn-ghost">+ Create Fixtures</a>
+            <a href="{% url 'subcounty_fixture_create' phase.pk %}?sport_id={{ sport.id }}" class="btn-ghost">+ Create Fixtures</a>
         {% endif %}
         {% if ps and ps.fixture_format in 'knockout,group_knockout' %}
-            <a href="{% url 'next_round_builder' ps.pk %}" class="btn-ghost">Build Next Round</a>
+            <a href="{% url 'subcounty_next_round_builder' ps.pk %}" class="btn-ghost">Build Next Round</a>
         {% endif %}
     </div>
     <div class="fixture-card-grid" style="margin-bottom:22px;">

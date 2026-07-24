@@ -16,7 +16,7 @@
     {% if form.non_field_errors %}
     <div style="color:var(--rust); font-size:0.82rem; margin-bottom:12px;">{{ form.non_field_errors }}</div>
 {% endif %}
-<form method="post" action="{% url 'tournament_desk' %}">
+<form method="post" action="{% url 'subcounty_tournament' %}">
     {% csrf_token %}
     <div class="form-grid-columns">
         <div class="form-field-box">
@@ -40,7 +40,7 @@
     </div>
 
     <p class="cell-sub" style="margin:-8px 0 16px;">
-        Leave Sub County and Ward blank for a countywide tournament.
+        Leave Ward blank for a Sub countywide tournament.
     </p>
 
     <div class="form-field-box" style="margin-bottom:16px;">

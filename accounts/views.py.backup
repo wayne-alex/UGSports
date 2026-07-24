@@ -1,6 +1,9 @@
 import csv
 import io
+import json
 from datetime import timedelta
+from io import StringIO
+from itertools import combinations
 
 from django.contrib import messages
 from django.contrib.auth import get_user_model, authenticate, login, update_session_auth_hash
@@ -9,8 +12,8 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
-from django.db import IntegrityError
-from django.db.models import ProtectedError, Count
+from django.db import IntegrityError, transaction
+from django.db.models import ProtectedError, Count, Model
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -19,12 +22,13 @@ from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
-from accounts.decorators import ward_admin_required, subcounty_admin_required, superadmin_admin_required
+from accounts.decorators import superadmin_admin_required, ward_admin_required, subcounty_admin_required
 from accounts.fixture_generator import FixtureGenerator
 from accounts.forms import TournamentForm, PlayerForm, TeamForm, PhaseForm, FixtureGenerationForm, FixtureEditForm, \
-    ProfileForm, WardAdminProfileForm, FixtureForm, WardTournamentForm, SubcountyTeamForm
+    ProfileForm, WardAdminProfileForm, FixtureForm, WardTournamentForm, SubcountyTeamForm, SubcountyTournamentForm, \
+    SingleFixtureForm
 from accounts.models import AuditLog, Sport, SubCounty, Ward, NewsPost, NewsComment, Tournament, Team, Player, Result, \
-    Phase, PhaseEntry, Fixture, PhaseSport, Goal, User
+    Phase, PhaseEntry, Fixture, PhaseSport, Goal, User, Card, Group
 from accounts.services import resolve_next_round, create_next_round_fixtures
 
 
@@ -206,8 +210,15 @@ def StaffAccountsView(request):
 def StaffCreateView(request):
     if request.method == 'POST':
         email = request.POST.get('email')
+
+        # Get password and ensure it's a string (no trailing comma)
+        password = request.POST.get('password')
+        if not password:
+            password = 'UGSports2026!'
+
         try:
-            user = User.objects.create(
+            # 1. Instantiate the object in memory first
+            user = User(
                 first_name=request.POST.get('first_name'),
                 last_name=request.POST.get('last_name'),
                 email=email,
@@ -216,9 +227,12 @@ def StaffCreateView(request):
                 role=request.POST.get('role'),
                 sub_county_id=request.POST.get('sub_county') or None,
                 ward_id=request.POST.get('ward') or None,
-                is_staff=True
+                is_staff=False
             )
-            user.set_password('UGSports2026!')
+            # 2. Set the hashed password safely
+            user.set_password(password)
+
+            # 3. Save to the database exactly once
             user.save()
 
             log_audit_action(request.user, AuditLog.Action.CREATE, user, request=request)
@@ -263,6 +277,11 @@ def StaffUpdateView(request, pk):
         else:
             user.sub_county = None
             user.ward = None
+
+        # --- NEW PASSWORD LOGIC ---
+        password = request.POST.get('password')
+        if password and password.strip():  # Check if a non-empty password was provided
+            user.set_password(password)
 
         user.save()
 
@@ -552,8 +571,21 @@ def PhaseCreateView(request, tournament_pk):
             phase.tournament = tournament
             phase.created_by = request.user
             phase.save()
+
+            # Grab form choices
+            selected_format = form.cleaned_data['fixture_format']
+            selected_legs = form.cleaned_data['legs']
+
+            # Assign choices when auto-creating PhaseSport entries
             for sport in tournament.sports.all():
-                PhaseSport.objects.get_or_create(phase=phase, sport=sport)
+                PhaseSport.objects.get_or_create(
+                    phase=phase,
+                    sport=sport,
+                    defaults={
+                        'fixture_format': selected_format,
+                        'legs': selected_legs,
+                    }
+                )
 
             log_audit_action(request.user, AuditLog.Action.CREATE, phase, request=request)
             messages.success(request, f'{phase} was created.')
@@ -710,24 +742,28 @@ def TeamCreateView(request, phase_pk):
                     coach_phone=row.get('coach_phone', ''),
                     created_by=request.user
                 )
-                PhaseEntry.objects.create(
+                log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
+                phase_entry = PhaseEntry.objects.create(
                     phase=phase,
                     team=team,
                     registered_by=request.user
                 )
+                log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
             messages.success(request, "Bulk teams imported successfully.")
             return redirect('phase_detail', pk=phase.pk)
 
         # 2. Handle Single Form
         form = TeamForm(request.POST)
         # Manually inject the ward since it's disabled in the form
-        if form.is_valid():
-            team = form.save(commit=False)
-            team.ward = phase.ward
-            team.created_by = request.user
-            team.save()
-            PhaseEntry.objects.create(phase=phase, team=team, registered_by=request.user)
-            return redirect('phase_detail', pk=phase.pk)
+        team = form.save(commit=False)
+        team.ward = phase.ward
+        team.created_by = request.user
+        team.save()
+        log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
+        phase_entry = PhaseEntry.objects.create(phase=phase, team=team, registered_by=request.user)
+        log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
+        return redirect('phase_detail',pk=phase.pk)
+
     else:
         form = TeamForm(initial={'ward': phase.ward})
 
@@ -764,11 +800,12 @@ def PhaseTeamSelectView(request, phase_pk):
             source_entry = feeder_entries.filter(team_id=team_id).first()
             if not source_entry:
                 continue
-            _, was_created = PhaseEntry.objects.get_or_create(
+            phase_entry, was_created = PhaseEntry.objects.get_or_create(
                 phase=phase, team_id=team_id,
                 defaults={'promoted_from': source_entry, 'registered_by': request.user},
             )
             if was_created:
+                log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
                 created += 1
 
         messages.success(request, f'{created} team{"s" if created != 1 else ""} advanced into {phase}.')
@@ -790,6 +827,7 @@ def PhaseStatusUpdateView(request, pk):
     if new_status in Phase.Status.values:
         phase.status = new_status
         phase.save(update_fields=['status'])
+        log_audit_action(request.user, AuditLog.Action.UPDATE, phase, request=request)
         messages.success(request, f'{phase} marked as {phase.get_status_display()}.')
     return redirect('phase_detail', pk=phase.pk)
 
@@ -824,11 +862,13 @@ def PhaseDeleteView(request, pk):
     tournament_pk = phase.tournament.pk
 
     if request.method == 'POST':  # Best practice: use a POST request for deletion
+        log_audit_action(request.user, AuditLog.Action.DELETE, phase, request=request)
         phase.delete()
         messages.success(request, "Phase deleted successfully.")
         return redirect('tournament_detail', pk=tournament_pk)
 
     # If you want to use a simple link, you can allow GET deletion (but POST is safer)
+    log_audit_action(request.user, AuditLog.Action.DELETE, phase, request=request)
     phase.delete()
     messages.success(request, "Phase deleted successfully.")
     return redirect('tournament_detail', pk=tournament_pk)
@@ -843,18 +883,20 @@ def PhaseEditView(request, pk):
         form = PhaseForm(request.POST, instance=phase)
         if form.is_valid():
             form.save()
-            messages.success(request, f"Phase updated successfully.")
             log_audit_action(request.user, AuditLog.Action.UPDATE, phase, request=request)
-            return redirect('tournament_detail', pk=phase.tournament.pk)
+        messages.success(request, f"Phase updated successfully.")
+        log_audit_action(request.user, AuditLog.Action.UPDATE, phase, request=request)
+        return redirect('tournament_detail', pk=phase.tournament.pk)
+
     else:
         form = PhaseForm(instance=phase)
 
-    return render(request, 'superadmin_phase_form.html', {
-        'form': form,
-        'phase': phase,
-        'tournament': phase.tournament,
-        'active_nav': 'tournaments'
-    })
+        return render(request, 'superadmin_phase_form.html', {
+            'form': form,
+            'phase': phase,
+            'tournament': phase.tournament,
+            'active_nav': 'tournaments'
+        })
 
 
 @superadmin_admin_required
@@ -893,18 +935,103 @@ def GenerateFixturesView(request, pk):
                     'max_matches_per_day': data.get('max_matches_per_day') or None,
                 })
                 generator.generate()
-                messages.success(request, f'Fixtures for {phase_sport.sport.name} generated successfully.')
                 log_audit_action(request.user, AuditLog.Action.GENERATE_FIXTURES, phase_sport, request=request)
+                messages.success(request, f'Fixtures for {phase_sport.sport.name} generated successfully.')
                 phase_sport.fixtures_generated = True
                 phase_sport.save(update_fields=['fixture_format', 'legs', 'fixtures_generated'])
             except ValidationError as e:
                 messages.error(request, str(e))
 
-            return redirect('phase_detail', pk=phase.pk)
+        return redirect('phase_detail', pk=phase.pk)
+
     else:
         form = FixtureGenerationForm()
 
     return render(request, 'superadmin_generate_fixtures.html', {'form': form, 'phase': phase})
+
+
+@superadmin_admin_required
+@login_required(login_url='login_admin')
+def FixtureCreateView(request, phase_pk):
+    phase = get_object_or_404(Phase, pk=phase_pk)
+    phase_sport = get_object_or_404(PhaseSport, phase=phase)
+
+    if request.method == 'POST':
+
+        # 1. Create a group/round label — used for both pools (A, B, C…) and
+        #    knockout rounds (QF, SF, Final). Fixture.group just needs a name to point at.
+        if 'group_name' in request.POST:
+            name = request.POST.get('group_name', '').strip()
+            if not name:
+                messages.error(request, "Group name is required.")
+            else:
+                group, was_created = Group.objects.get_or_create(phase_sport=phase_sport, name=name)
+                if was_created:
+                    log_audit_action(request.user, AuditLog.Action.CREATE, group, request=request)
+                    messages.success(request, f"Group '{name}' created.")
+                else:
+                    messages.info(request, f"Group '{name}' already exists.")
+            return redirect('fixture_create', phase_pk=phase.pk)
+
+        # 2. Bulk CSV import — columns: group,home_team,away_team,round_number,venue,kickoff_at
+        if 'csv_file' in request.FILES:
+            data = request.FILES['csv_file'].read().decode('utf-8')
+            reader = csv.DictReader(io.StringIO(data))
+            entry_qs = PhaseEntry.objects.filter(phase=phase).select_related('team')
+            teams_by_name = {e.team.name.strip().lower(): e.team for e in entry_qs}
+            groups_by_name = {g.name.strip().lower(): g for g in phase_sport.groups.all()}
+            created, errors = 0, []
+            with transaction.atomic():
+                for i, row in enumerate(reader, start=2):
+                    try:
+                        home = teams_by_name[row['home_team'].strip().lower()]
+                        away = teams_by_name[row['away_team'].strip().lower()]
+                        group = groups_by_name.get((row.get('group') or '').strip().lower())
+                        if home == away:
+                            raise ValueError("home_team and away_team are the same")
+                        fixture = Fixture(
+                            phase_sport=phase_sport,
+                            group=group,
+                            home_team=home,
+                            away_team=away,
+                            round_number=int(row['round_number']),
+                            venue=row.get('venue') or (group.name if group else ''),
+                            status=Fixture.Status.SCHEDULED,
+                        )
+                        fixture.full_clean()
+                        fixture.save()
+                        log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
+                        created += 1
+                    except KeyError as e:
+                        errors.append(f"Row {i}: unmatched team/column {e}")
+                    except Exception as e:
+                        errors.append(f"Row {i}: {e}")
+                if errors and not created:
+                    transaction.set_rollback(True)
+            for err in errors[:20]:
+                messages.warning(request, err)
+            if created:
+                messages.success(request, f"{created} fixtures imported.")
+            return redirect('phase_detail', pk=phase.pk)
+
+        # 3. Single fixture form
+        form = SingleFixtureForm(request.POST, phase_sport=phase_sport)
+        if form.is_valid():
+            fixture = form.save(commit=False)
+            fixture.phase_sport = phase_sport
+            fixture.save()
+            log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
+            messages.success(request, "Fixture added.")
+            return redirect('phase_detail', pk=phase.pk)
+    else:
+        form = SingleFixtureForm(phase_sport=phase_sport)
+
+    return render(request, 'superadmin_fixture_create.html', {
+        'form': form,
+        'phase_sport': phase_sport,
+        'groups': Group.objects.filter(phase_sport=phase_sport),
+        'phase': phase,
+    })
 
 
 @superadmin_admin_required
@@ -916,8 +1043,8 @@ def edit_fixture_view(request, pk):
         form = FixtureEditForm(request.POST, instance=fixture)
         if form.is_valid():
             form.save()
-            return redirect('phase_detail', fixture.phase_sport.pk)
             log_audit_action(request.user, AuditLog.Action.UPDATE, fixture, request=request)
+            return redirect('phase_detail', fixture.phase_sport.pk)
     else:
         form = FixtureEditForm(instance=fixture)
 
@@ -1170,16 +1297,18 @@ def ResultEntryView(request, fixture_pk):
     tournament = fixture.phase_sport.phase.tournament
     home_players = Player.objects.filter(tournament=tournament, team=fixture.home_team).order_by('jersey_number')
     away_players = Player.objects.filter(tournament=tournament, team=fixture.away_team).order_by('jersey_number')
-
     result = Result.objects.filter(fixture=fixture).first()
     existing_goals = Goal.objects.filter(fixture=fixture).select_related('scorer', 'assisted_by') if result else []
     existing_home_goals = [g for g in existing_goals if g.scorer.team_id == fixture.home_team_id]
     existing_away_goals = [g for g in existing_goals if g.scorer.team_id == fixture.away_team_id]
 
+    existing_cards = Card.objects.filter(fixture=fixture).select_related('player') if result else []
+    existing_home_cards = [c for c in existing_cards if c.player.team_id == fixture.home_team_id]
+    existing_away_cards = [c for c in existing_cards if c.player.team_id == fixture.away_team_id]
+
     if request.method == 'POST':
         home_score = int(request.POST.get('home_score') or 0)
         away_score = int(request.POST.get('away_score') or 0)
-
         if result:
             result.home_score = home_score
             result.away_score = away_score
@@ -1188,7 +1317,6 @@ def ResultEntryView(request, fixture_pk):
             result = Result.objects.create(
                 fixture=fixture, home_score=home_score, away_score=away_score, entered_by=request.user
             )
-
         fixture.status = Fixture.Status.COMPLETED
         fixture.save(update_fields=['status'])
         log_audit_action(request.user, AuditLog.Action.UPDATE, fixture, request=request)
@@ -1204,6 +1332,17 @@ def ResultEntryView(request, fixture_pk):
                 fixture=fixture, scorer_id=scorer_id, assisted_by_id=assist_id or None, minute=minute or None,
             )
 
+        Card.objects.filter(fixture=fixture).delete()
+        card_player_ids = request.POST.getlist('card_player')
+        card_types = request.POST.getlist('card_type')
+        card_minutes = request.POST.getlist('card_minute')
+        for player_id, card_type, minute in zip(card_player_ids, card_types, card_minutes):
+            if not player_id or not card_type:
+                continue
+            Card.objects.create(
+                fixture=fixture, player_id=player_id, card_type=card_type, minute=minute or None,
+            )
+
         messages.success(request, f'Result saved for {fixture}.')
         return redirect('phase_detail', pk=fixture.phase_sport.phase_id)
 
@@ -1214,6 +1353,8 @@ def ResultEntryView(request, fixture_pk):
         'away_players': away_players,
         'existing_home_goals': existing_home_goals,
         'existing_away_goals': existing_away_goals,
+        'existing_home_cards': existing_home_cards,
+        'existing_away_cards': existing_away_cards,
         'active_nav': 'tournaments',
     })
 
@@ -1230,10 +1371,6 @@ def manage_team(request, pk):
     from_phase_id = request.GET.get('from_phase')
     phase = get_object_or_404(Phase, pk=from_phase_id) if from_phase_id else None
 
-    # Resolve the tournament new players get registered against — prefer the
-    # phase we arrived from, fall back to any tournament this team is already
-    # entered in (a team can only genuinely belong to one tournament's roster
-    # at a time in practice, even though PhaseEntry doesn't enforce that).
     tournament = phase.tournament if phase else None
     if not tournament:
         first_entry = team.phase_entries.select_related('phase__tournament').first()
@@ -1249,6 +1386,12 @@ def manage_team(request, pk):
     if request.method == "POST":
         action = request.POST.get('action')
 
+        # Build the redirect target up front so every branch shares it
+        redirect_url = reverse('manage_team', kwargs={'pk': team.pk})
+        if from_phase_id:
+            redirect_url += f"?from_phase={from_phase_id}"
+
+        # ------------------ EDIT TEAM DETAILS ------------------
         if action == 'edit_team':
             name = request.POST.get('name', '').strip()
             if not name:
@@ -1259,16 +1402,18 @@ def manage_team(request, pk):
                 team.coach_name = request.POST.get('coach_name', '').strip()
                 team.coach_phone = request.POST.get('coach_phone', '').strip()
                 team.save()
-                messages.success(request, "Team details updated successfully.")
                 log_audit_action(request.user, AuditLog.Action.UPDATE, team, request=request)
+                messages.success(request, "Team details updated successfully.")
 
+        # ------------------ ADD PLAYER ------------------
         elif action == 'add_player':
             if not tournament:
-                messages.error(request, "This team isn't entered into any tournament yet — add it to a phase first.")
+                messages.error(request, "This team isn't entered into any tournament yet. Add it to a phase first.")
             else:
                 name = request.POST.get('player_name', '').strip()
                 jersey_raw = request.POST.get('jersey_number', '').strip()
                 position = request.POST.get('position', '').strip()
+                is_captain = request.POST.get('is_captain') == 'on'
 
                 if not name or not jersey_raw:
                     messages.error(request, "Both name and jersey number are required.")
@@ -1281,25 +1426,137 @@ def manage_team(request, pk):
                         if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exists():
                             messages.error(request, f"Jersey number #{jersey} is already taken on this team.")
                         else:
-                            Player.objects.create(
+                            # Handle singular captain policy
+                            if is_captain:
+                                team.players.filter(is_captain=True).update(is_captain=False)
+
+                            player = Player.objects.create(
                                 team=team,
                                 tournament=tournament,
                                 name=name,
                                 jersey_number=jersey,
                                 position=position,
+                                is_captain=is_captain,
                                 created_by=request.user,
                             )
+                            log_audit_action(request.user, AuditLog.Action.CREATE, player, request=request)
                             messages.success(request, f"{name} added to the squad.")
 
+        # ------------------ EDIT PLAYER ------------------
+        elif action == 'edit_player':
+            player = get_object_or_404(Player, pk=request.POST.get('player_id'), team=team)
+            name = request.POST.get('player_name', '').strip()
+            jersey_raw = request.POST.get('jersey_number', '').strip()
+            position = request.POST.get('position', '').strip()
+            is_captain = request.POST.get('is_captain') == 'on'
+
+            if not name or not jersey_raw:
+                messages.error(request, "Both name and jersey number are required.")
+            else:
+                try:
+                    jersey = int(jersey_raw)
+                except ValueError:
+                    messages.error(request, "Jersey number must be a whole number.")
+                else:
+                    if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exclude(pk=player.pk).exists():
+                        messages.error(request, f"Jersey number #{jersey} is already taken on this team.")
+                    else:
+                        # Handle singular captain policy
+                        if is_captain:
+                            team.players.filter(is_captain=True).update(is_captain=False)
+
+                        player.name = name
+                        player.jersey_number = jersey
+                        player.position = position
+                        player.is_captain = is_captain
+                        player.save()
+                        log_audit_action(request.user, AuditLog.Action.UPDATE, player, request=request)
+                        messages.success(request, f"Updated player {name} successfully.")
+
+        # ------------------ REMOVE PLAYER ------------------
         elif action == 'remove_player':
             player = get_object_or_404(Player, pk=request.POST.get('player_id'), team=team)
             player_name = player.name
             player.delete()
+            log_audit_action(request.user, AuditLog.Action.DELETE, player, request=request)
             messages.success(request, f"Removed {player_name} from the roster.")
 
-        redirect_url = reverse('manage_team', kwargs={'pk': team.pk})
-        if from_phase_id:
-            redirect_url += f"?from_phase={from_phase_id}"
+        # ------------------ BULK CSV IMPORT ------------------
+        elif action == 'bulk_add_players':
+            if not tournament:
+                messages.error(request, "This team isn't entered into any tournament yet. Add it to a phase first.")
+            else:
+                csv_file = request.FILES.get('csv_file')
+                if not csv_file:
+                    messages.error(request, "Please choose a CSV file to upload.")
+                elif not csv_file.name.lower().endswith('.csv'):
+                    messages.error(request, "Please upload a file with a .csv extension.")
+                else:
+                    try:
+                        decoded = csv_file.read().decode('utf-8-sig')
+                    except UnicodeDecodeError:
+                        messages.error(request, "Couldn't read that file. Please save it as UTF-8 CSV and try again.")
+                    else:
+                        reader = csv.DictReader(StringIO(decoded))
+                        headers = {h.strip().lower() for h in (reader.fieldnames or [])}
+
+                        if not {'name', 'jersey_number'}.issubset(headers):
+                            messages.error(request, "CSV must include 'name' and 'jersey_number' columns.")
+                        else:
+                            valid_positions = {c[0] for c in Player.Position.choices}
+                            existing_jerseys = set(
+                                Player.objects.filter(team=team, tournament=tournament)
+                                .values_list('jersey_number', flat=True)
+                            )
+                            seen_in_file = set()
+                            to_create = []
+                            errors = []
+
+                            for i, row in enumerate(reader, start=2):
+                                row = {k.strip().lower(): (v or '').strip() for k, v in row.items()}
+                                name = row.get('name', '')
+                                jersey_raw = row.get('jersey_number', '')
+                                position = row.get('position', '').upper()
+                                national_id = row.get('national_id', '')
+
+                                if not name or not jersey_raw:
+                                    errors.append(f"Row {i}: missing name or jersey number.")
+                                    continue
+                                try:
+                                    jersey = int(jersey_raw)
+                                except ValueError:
+                                    errors.append(f"Row {i}: jersey number '{jersey_raw}' is not a whole number.")
+                                    continue
+                                if jersey in existing_jerseys or jersey in seen_in_file:
+                                    errors.append(f"Row {i}: jersey #{jersey} is already taken.")
+                                    continue
+                                if position and position not in valid_positions:
+                                    errors.append(f"Row {i}: unknown position '{position}' - left blank.")
+                                    position = ''
+
+                                to_create.append(Player(
+                                    team=team, tournament=tournament, name=name,
+                                    jersey_number=jersey, position=position,
+                                    national_id=national_id, created_by=request.user,
+                                    is_captain=False # CSV bulk creates are not marked as captain by default
+                                ))
+                                seen_in_file.add(jersey)
+
+                            if to_create:
+                                Player.objects.bulk_create(to_create)
+                                log_audit_action(
+                                    request.user, AuditLog.Action.CREATE, team, request=request,
+                                    changes={'bulk_players_added': len(to_create)}
+                                )
+                                messages.success(
+                                    request,
+                                    f"Added {len(to_create)} player{'s' if len(to_create) != 1 else ''} from CSV."
+                                )
+                            if errors:
+                                preview = " | ".join(errors[:10])
+                                more = f" (+{len(errors) - 10} more)" if len(errors) > 10 else ""
+                                messages.warning(request, f"{len(errors)} row(s) skipped: {preview}{more}")
+
         return redirect(redirect_url)
 
     context = {
@@ -1373,6 +1630,76 @@ def account_settings(request):
         'password_form': password_form,
         'active_nav': 'settings',
     })
+
+
+@superadmin_admin_required
+@login_required(login_url='login_admin')
+@require_POST
+def save_groups_and_generate_fixtures(request, phase_sport_pk):
+    """
+    Expects JSON input:
+    {
+        "groups": [
+            {"name": "Group A", "team_ids": [1, 2, 3, 4]},
+            {"name": "Group B", "team_ids": [5, 6, 7, 8]}
+        ],
+        "generate_fixtures": true
+    }
+    """
+    phase_sport = get_object_or_404(PhaseSport, pk=phase_sport_pk)
+
+    try:
+        data = json.loads(request.body)
+        groups_data = data.get('groups', [])
+        generate_fixtures = data.get('generate_fixtures', True)
+
+        with transaction.atomic():
+            # 1. Update/Create Groups
+            existing_groups = {g.name: g for g in phase_sport.groups.all()}
+            active_group_ids = []
+
+            for g_info in groups_data:
+                group_name = g_info['name'].strip()
+                team_ids = g_info.get('team_ids', [])
+
+                group, _ = Group.objects.get_or_create(
+                    phase_sport=phase_sport,
+                    name=group_name
+                )
+                active_group_ids.append(group.id)
+
+                # Assign teams to this group via PhaseEntry
+                PhaseEntry.objects.filter(phase=phase_sport.phase, team_id__in=team_ids).update(group=group)
+
+                # 2. Auto-generate round-robin fixtures if requested
+                if generate_fixtures and len(team_ids) >= 2:
+                    # Clear existing scheduled fixtures for this group to prevent duplication
+                    Fixture.objects.filter(phase_sport=phase_sport, group=group,
+                                           status=Fixture.Status.SCHEDULED).delete()
+
+                    # Round-robin pairings
+                    pairings = list(combinations(team_ids, 2))
+                    legs = phase_sport.legs  # 1 for single, 2 for home & away
+
+                    for leg in range(1, legs + 1):
+                        for round_idx, (home_id, away_id) in enumerate(pairings, start=1):
+                            # Swap home/away on second leg
+                            if leg == 2:
+                                home_id, away_id = away_id, home_id
+
+                            Fixture.objects.create(
+                                phase_sport=phase_sport,
+                                group=group,
+                                home_team_id=home_id,
+                                away_team_id=away_id,
+                                round_number=((leg - 1) * len(pairings)) + round_idx,
+                                status=Fixture.Status.SCHEDULED
+                            )
+
+        return JsonResponse({'status': 'success', 'message': 'Groups and fixtures updated successfully!'})
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
 
 
 # WARD
@@ -1535,6 +1862,7 @@ def WardGenerateFixturesView(request, pk):
                     'max_matches_per_day': data.get('max_matches_per_day') or None,
                 })
                 generator.generate()
+                log_audit_action(request.user, AuditLog.Action.GENERATE_FIXTURES, phase_sport, request=request)
                 phase_sport.fixtures_generated = True
                 phase_sport.save(update_fields=['fixtures_generated'])
                 messages.success(request, f'Fixtures for {phase_sport.sport.name} generated successfully.')
@@ -1602,8 +1930,8 @@ def ward_edit_fixture_view(request, pk):
         form = FixtureEditForm(request.POST, instance=fixture)
         if form.is_valid():
             form.save()
-            return redirect('phase_detail', fixture.phase_sport.pk)
             log_audit_action(request.user, AuditLog.Action.UPDATE, fixture, request=request)
+            return redirect('phase_detail', fixture.phase_sport.pk)
     else:
         form = FixtureEditForm(instance=fixture)
 
@@ -1619,10 +1947,7 @@ def ward_manage_team(request, pk):
     from_phase_id = request.GET.get('from_phase')
     phase = get_object_or_404(Phase, pk=from_phase_id) if from_phase_id else None
 
-    # Resolve the tournament new players get registered against — prefer the
-    # phase we arrived from, fall back to any tournament this team is already
-    # entered in (a team can only genuinely belong to one tournament's roster
-    # at a time in practice, even though PhaseEntry doesn't enforce that).
+    # Resolve the tournament new players get registered against
     tournament = phase.tournament if phase else None
     if not tournament:
         first_entry = team.phase_entries.select_related('phase__tournament').first()
@@ -1648,16 +1973,17 @@ def ward_manage_team(request, pk):
                 team.coach_name = request.POST.get('coach_name', '').strip()
                 team.coach_phone = request.POST.get('coach_phone', '').strip()
                 team.save()
-                messages.success(request, "Team details updated successfully.")
                 log_audit_action(request.user, AuditLog.Action.UPDATE, team, request=request)
+                messages.success(request, "Team details updated successfully.")
 
         elif action == 'add_player':
             if not tournament:
-                messages.error(request, "This team isn't entered into any tournament yet — add it to a phase first.")
+                messages.error(request, "This team isn't entered into any tournament yet. Add it to a phase first.")
             else:
                 name = request.POST.get('player_name', '').strip()
                 jersey_raw = request.POST.get('jersey_number', '').strip()
                 position = request.POST.get('position', '').strip()
+                is_captain = 'is_captain' in request.POST
 
                 if not name or not jersey_raw:
                     messages.error(request, "Both name and jersey number are required.")
@@ -1670,21 +1996,141 @@ def ward_manage_team(request, pk):
                         if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exists():
                             messages.error(request, f"Jersey number #{jersey} is already taken on this team.")
                         else:
-                            Player.objects.create(
+                            # If this player is marked as captain, demote existing captains on this team
+                            if is_captain:
+                                team.players.filter(is_captain=True).update(is_captain=False)
+
+                            player = Player.objects.create(
                                 team=team,
                                 tournament=tournament,
                                 name=name,
                                 jersey_number=jersey,
                                 position=position,
+                                is_captain=is_captain,
                                 created_by=request.user,
                             )
+                            log_audit_action(request.user, AuditLog.Action.CREATE, player, request=request)
                             messages.success(request, f"{name} added to the squad.")
+
+        elif action == 'edit_player':
+            player_id = request.POST.get('player_id')
+            player = get_object_or_404(Player, pk=player_id, team=team)
+
+            name = request.POST.get('player_name', '').strip()
+            jersey_raw = request.POST.get('jersey_number', '').strip()
+            position = request.POST.get('position', '').strip()
+            is_captain = 'is_captain' in request.POST
+
+            if not name or not jersey_raw:
+                messages.error(request, "Both name and jersey number are required.")
+            else:
+                try:
+                    jersey = int(jersey_raw)
+                except ValueError:
+                    messages.error(request, "Jersey number must be a whole number.")
+                else:
+                    # Make sure jersey number is not already taken by a DIFFERENT player on the team
+                    if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exclude(
+                            pk=player.pk).exists():
+                        messages.error(request, f"Jersey number #{jersey} is already taken by another player.")
+                    else:
+                        import copy
+                        old_player = copy.deepcopy(player)
+
+                        # If set as captain, clear any previous captains on the team
+                        if is_captain:
+                            team.players.filter(is_captain=True).exclude(pk=player.pk).update(is_captain=False)
+
+                        player.name = name
+                        player.jersey_number = jersey
+                        player.position = position
+                        player.is_captain = is_captain
+                        player.save()
+
+                        changes = calculate_model_changes(old_player, player)
+                        log_audit_action(request.user, AuditLog.Action.UPDATE, player, changes=changes, request=request)
+                        messages.success(request, f"{player.name}'s details updated successfully.")
 
         elif action == 'remove_player':
             player = get_object_or_404(Player, pk=request.POST.get('player_id'), team=team)
             player_name = player.name
             player.delete()
+            log_audit_action(request.user, AuditLog.Action.DELETE, player, request=request)
             messages.success(request, f"Removed {player_name} from the roster.")
+
+        elif action == 'bulk_add_players':
+            if not tournament:
+                messages.error(request, "This team isn't entered into any tournament yet. Add it to a phase first.")
+            else:
+                csv_file = request.FILES.get('csv_file')
+                if not csv_file:
+                    messages.error(request, "Please choose a CSV file to upload.")
+                elif not csv_file.name.lower().endswith('.csv'):
+                    messages.error(request, "Please upload a file with a .csv extension.")
+                else:
+                    try:
+                        decoded = csv_file.read().decode('utf-8-sig')
+                    except UnicodeDecodeError:
+                        messages.error(request, "Couldn't read that file. Please save it as UTF-8 CSV and try again.")
+                    else:
+                        reader = csv.DictReader(StringIO(decoded))
+                        headers = {h.strip().lower() for h in (reader.fieldnames or [])}
+
+                        if not {'name', 'jersey_number'}.issubset(headers):
+                            messages.error(request, "CSV must include 'name' and 'jersey_number' columns.")
+                        else:
+                            valid_positions = {c[0] for c in Player.Position.choices}
+                            existing_jerseys = set(
+                                Player.objects.filter(team=team, tournament=tournament)
+                                .values_list('jersey_number', flat=True)
+                            )
+                            seen_in_file = set()
+                            to_create = []
+                            errors = []
+
+                            for i, row in enumerate(reader, start=2):  # Row 2 = first data row
+                                row = {k.strip().lower(): (v or '').strip() for k, v in row.items()}
+                                name = row.get('name', '')
+                                jersey_raw = row.get('jersey_number', '')
+                                position = row.get('position', '').upper()
+                                national_id = row.get('national_id', '')
+
+                                if not name or not jersey_raw:
+                                    errors.append(f"Row {i}: missing name or jersey number.")
+                                    continue
+                                try:
+                                    jersey = int(jersey_raw)
+                                except ValueError:
+                                    errors.append(f"Row {i}: jersey number '{jersey_raw}' is not a whole number.")
+                                    continue
+                                if jersey in existing_jerseys or jersey in seen_in_file:
+                                    errors.append(f"Row {i}: jersey #{jersey} is already taken.")
+                                    continue
+                                if position and position not in valid_positions:
+                                    errors.append(f"Row {i}: unknown position '{position}' - left blank.")
+                                    position = ''
+
+                                to_create.append(Player(
+                                    team=team, tournament=tournament, name=name,
+                                    jersey_number=jersey, position=position,
+                                    national_id=national_id, created_by=request.user,
+                                ))
+                                seen_in_file.add(jersey)
+
+                            if to_create:
+                                Player.objects.bulk_create(to_create)
+                                log_audit_action(
+                                    request.user, AuditLog.Action.CREATE, team, request=request,
+                                    changes={'bulk_players_added': len(to_create)}
+                                )
+                                messages.success(
+                                    request,
+                                    f"Added {len(to_create)} player{'s' if len(to_create) != 1 else ''} from CSV."
+                                )
+                            if errors:
+                                preview = " | ".join(errors[:10])
+                                more = f" (+{len(errors) - 10} more)" if len(errors) > 10 else ""
+                                messages.warning(request, f"{len(errors)} row(s) skipped: {preview}{more}")
 
         redirect_url = reverse('ward_manage_team', kwargs={'pk': team.pk})
         if from_phase_id:
@@ -1715,37 +2161,62 @@ def ward_ResultEntryView(request, fixture_pk):
     away_players = Player.objects.filter(tournament=tournament, team=fixture.away_team).order_by('jersey_number')
 
     result = Result.objects.filter(fixture=fixture).first()
+
+    # Query existing Goals
     existing_goals = Goal.objects.filter(fixture=fixture).select_related('scorer', 'assisted_by') if result else []
     existing_home_goals = [g for g in existing_goals if g.scorer.team_id == fixture.home_team_id]
     existing_away_goals = [g for g in existing_goals if g.scorer.team_id == fixture.away_team_id]
+
+    # Query existing Cards (Assuming you have a Booking/Card model)
+    # Adjust "Booking" below to whatever your actual card model is named (e.g., Booking, Card, CardRecord)
+    existing_cards = Card.objects.filter(fixture=fixture).select_related('player') if result else []
+    existing_home_cards = [c for c in existing_cards if c.player.team_id == fixture.home_team_id]
+    existing_away_cards = [c for c in existing_cards if c.player.team_id == fixture.away_team_id]
 
     if request.method == 'POST':
         home_score = int(request.POST.get('home_score') or 0)
         away_score = int(request.POST.get('away_score') or 0)
 
-        if result:
-            result.home_score = home_score
-            result.away_score = away_score
-            result.save()
-        else:
-            result = Result.objects.create(
-                fixture=fixture, home_score=home_score, away_score=away_score, entered_by=request.user
-            )
+        with transaction.atomic():
+            if result:
+                result.home_score = home_score
+                result.away_score = away_score
+                result.save()
+            else:
+                result = Result.objects.create(
+                    fixture=fixture, home_score=home_score, away_score=away_score, entered_by=request.user
+                )
 
-        fixture.status = Fixture.Status.COMPLETED
-        fixture.save(update_fields=['status'])
-        log_audit_action(request.user, AuditLog.Action.UPDATE, fixture, request=request)
+            fixture.status = Fixture.Status.COMPLETED
+            fixture.save(update_fields=['status'])
+            log_audit_action(request.user, AuditLog.Action.UPDATE, fixture, request=request)
 
-        Goal.objects.filter(fixture=fixture).delete()
-        scorer_ids = request.POST.getlist('scorer')
-        assist_ids = request.POST.getlist('assisted_by')
-        minutes = request.POST.getlist('minute')
-        for scorer_id, assist_id, minute in zip(scorer_ids, assist_ids, minutes):
-            if not scorer_id:
-                continue
-            Goal.objects.create(
-                fixture=fixture, scorer_id=scorer_id, assisted_by_id=assist_id or None, minute=minute or None,
-            )
+            # --- Save Goals ---
+            Goal.objects.filter(fixture=fixture).delete()
+            scorer_ids = request.POST.getlist('scorer')
+            assist_ids = request.POST.getlist('assisted_by')
+            minutes = request.POST.getlist('minute')
+            for scorer_id, assist_id, minute in zip(scorer_ids, assist_ids, minutes):
+                if not scorer_id:
+                    continue
+                Goal.objects.create(
+                    fixture=fixture, scorer_id=scorer_id, assisted_by_id=assist_id or None, minute=minute or None,
+                )
+
+            # --- Save Cards / Bookings ---
+            Card.objects.filter(fixture=fixture).delete()
+            card_players = request.POST.getlist('card_player')
+            card_types = request.POST.getlist('card_type')
+            card_minutes = request.POST.getlist('card_minute')
+            for player_id, c_type, c_minute in zip(card_players, card_types, card_minutes):
+                if not player_id or not c_type:
+                    continue
+                Card.objects.create(
+                    fixture=fixture,
+                    player_id=player_id,
+                    card_type=c_type,  # 'yellow' or 'red'
+                    minute=c_minute or None
+                )
 
         messages.success(request, f'Result saved for {fixture}.')
         return redirect('ward_tournament')
@@ -1757,6 +2228,8 @@ def ward_ResultEntryView(request, fixture_pk):
         'away_players': away_players,
         'existing_home_goals': existing_home_goals,
         'existing_away_goals': existing_away_goals,
+        'existing_home_cards': existing_home_cards,
+        'existing_away_cards': existing_away_cards,
         'active_nav': 'tournaments',
     })
 
@@ -1809,11 +2282,13 @@ def ward_TeamCreateView(request, phase_pk):
                     coach_phone=row.get('coach_phone', ''),
                     created_by=request.user
                 )
-                PhaseEntry.objects.create(
+                log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
+                phase_entry = PhaseEntry.objects.create(
                     phase=phase,
                     team=team,
                     registered_by=request.user
                 )
+                log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
             messages.success(request, "Bulk teams imported successfully.")
             return redirect('ward_dashboard')
 
@@ -1825,9 +2300,10 @@ def ward_TeamCreateView(request, phase_pk):
             team.ward = phase.ward
             team.created_by = request.user
             team.save()
-            PhaseEntry.objects.create(phase=phase, team=team, registered_by=request.user)
-            return redirect('ward_dashboard')
-    else:
+            log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
+            phase_entry = PhaseEntry.objects.create(phase=phase, team=team, registered_by=request.user)
+            log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
+            return redirect("ward_dashboard")
         form = TeamForm(initial={'ward': phase.ward})
 
     return render(request, 'ward/wardadmin_team_form.html', {'form': form, 'phase': phase})
@@ -2063,6 +2539,7 @@ def ward_account_settings(request):
 
 
 # SUB COUNTY
+
 @subcounty_admin_required
 def subcounty_dashboard(request):
     sub_county = request.user.sub_county
@@ -2291,6 +2768,7 @@ def SubcountyGenerateFixturesView(request, pk):
                     'max_matches_per_day': data.get('max_matches_per_day') or None,
                 })
                 generator.generate()
+                log_audit_action(request.user, AuditLog.Action.GENERATE_FIXTURES, phase_sport, request=request)
                 phase_sport.fixtures_generated = True
                 phase_sport.save(update_fields=['fixtures_generated'])
                 messages.success(request, f'Fixtures for {phase_sport.sport.name} generated successfully.')
@@ -2421,7 +2899,11 @@ def subcounty_team_create(request, phase_pk):
                         'created_by': request.user,
                     }
                 )
-                PhaseEntry.objects.get_or_create(phase=phase, team=team)
+                if was_created:
+                    log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
+                phase_entry, pe_created = PhaseEntry.objects.get_or_create(phase=phase, team=team)
+                if pe_created:
+                    log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
                 if was_created:
                     created += 1
 
@@ -2441,7 +2923,10 @@ def subcounty_team_create(request, phase_pk):
                 else:
                     team.created_by = request.user
                     team.save()
-                    PhaseEntry.objects.get_or_create(phase=phase, team=team)
+                    log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
+                    phase_entry, pe_created = PhaseEntry.objects.get_or_create(phase=phase, team=team)
+                    if pe_created:
+                        log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
                     messages.success(request, f'"{team.name}" was added.')
                     return redirect('subcounty_phase_detail', phase_id=phase.pk)
             # fall through to re-render with errors
@@ -2461,62 +2946,165 @@ def subcounty_manage_team(request, pk):
     sub_county = request.user.sub_county
     team = get_object_or_404(Team.objects.select_related('sport', 'ward'), pk=pk, ward__sub_county=sub_county)
 
+    from_phase_id = request.GET.get('from_phase')
     phase = None
-    from_phase = request.GET.get('from_phase')
-    if from_phase:
+    if from_phase_id:
         my_wards = Ward.objects.filter(sub_county=sub_county)
         phase = Phase.objects.filter(
-            Q(pk=from_phase) & (Q(sub_county=sub_county) | Q(ward__in=my_wards))
+            Q(pk=from_phase_id) & (Q(sub_county=sub_county) | Q(ward__in=my_wards))
         ).select_related('tournament').first()
+
+    # Resolve tournament context (matches superadmin logic)
+    tournament = phase.tournament if phase else None
+    if not tournament:
+        first_entry = team.phase_entries.select_related('phase__tournament').first()
+        tournament = first_entry.phase.tournament if first_entry else None
 
     if request.method == 'POST':
         action = request.POST.get('action')
 
+        # Shared redirect URL setup
+        redirect_url = reverse('subcounty_manage_team', kwargs={'pk': team.pk})
+        if from_phase_id:
+            redirect_url += f"?from_phase={from_phase_id}"
+
         if action == 'edit_team':
-            team.name = request.POST.get('name', team.name).strip()
-            team.home_ground = request.POST.get('home_ground', '').strip()
-            team.coach_name = request.POST.get('coach_name', '').strip()
-            team.coach_phone = request.POST.get('coach_phone', '').strip()
-            team.save(update_fields=['name', 'home_ground', 'coach_name', 'coach_phone'])
-            messages.success(request, "Team details updated.")
+            name = request.POST.get('name', '').strip()
+            if not name:
+                messages.error(request, "Team name cannot be empty.")
+            else:
+                team.name = name
+                team.home_ground = request.POST.get('home_ground', '').strip()
+                team.coach_name = request.POST.get('coach_name', '').strip()
+                team.coach_phone = request.POST.get('coach_phone', '').strip()
+                team.save(update_fields=['name', 'home_ground', 'coach_name', 'coach_phone'])
+                log_audit_action(request.user, AuditLog.Action.UPDATE, team, request=request)
+                messages.success(request, "Team details updated successfully.")
 
         elif action == 'add_player':
-            player_name = request.POST.get('player_name', '').strip()
-            jersey_number = request.POST.get('jersey_number')
-            position = request.POST.get('position') or ''
-
-            if not player_name or not jersey_number:
-                messages.error(request, "Player name and jersey number are required.")
+            if not tournament:
+                messages.error(request, "This team isn't entered into any tournament yet. Add it to a phase first.")
             else:
-                tournament = phase.tournament if phase else None
-                exists_qs = Player.objects.filter(team=team, jersey_number=jersey_number)
-                if tournament:
-                    exists_qs = exists_qs.filter(tournament=tournament)
-                if exists_qs.exists():
-                    messages.error(request, f"Jersey number {jersey_number} is already taken on this squad.")
+                player_name = request.POST.get('player_name', '').strip()
+                jersey_raw = request.POST.get('jersey_number', '').strip()
+                position = request.POST.get('position', '').strip()
+
+                if not player_name or not jersey_raw:
+                    messages.error(request, "Both name and jersey number are required.")
                 else:
-                    Player.objects.create(
-                        team=team,
-                        name=player_name,
-                        jersey_number=jersey_number,
-                        position=position,
-                        tournament=tournament,
-                    )
-                    messages.success(request, f'"{player_name}" added to the squad.')
+                    try:
+                        jersey = int(jersey_raw)
+                    except ValueError:
+                        messages.error(request, "Jersey number must be a whole number.")
+                    else:
+                        if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exists():
+                            messages.error(request, f"Jersey number #{jersey} is already taken on this team.")
+                        else:
+                            player = Player.objects.create(
+                                team=team,
+                                tournament=tournament,
+                                name=player_name,
+                                jersey_number=jersey,
+                                position=position,
+                                created_by=request.user,
+                            )
+                            log_audit_action(request.user, AuditLog.Action.CREATE, player, request=request)
+                            messages.success(request, f'"{player_name}" added to the squad.')
 
         elif action == 'remove_player':
-            player_id = request.POST.get('player_id')
-            player = get_object_or_404(Player, pk=player_id, team=team)
+            player = get_object_or_404(Player, pk=request.POST.get('player_id'), team=team)
+            player_name = player.name
             player.delete()
-            messages.success(request, f'"{player.name}" removed from the squad.')
+            log_audit_action(request.user, AuditLog.Action.DELETE, player, request=request)
+            messages.success(request, f'"{player_name}" removed from the roster.')
 
-        redirect_url = reverse('subcounty_manage_team', kwargs={'pk': team.pk})
-        if from_phase:
-            redirect_url += f"?from_phase={from_phase}"
+        elif action == 'bulk_add_players':
+            if not tournament:
+                messages.error(request, "This team isn't entered into any tournament yet. Add it to a phase first.")
+            else:
+                csv_file = request.FILES.get('csv_file')
+                if not csv_file:
+                    messages.error(request, "Please choose a CSV file to upload.")
+                elif not csv_file.name.lower().endswith('.csv'):
+                    messages.error(request, "Please upload a file with a .csv extension.")
+                else:
+                    try:
+                        decoded = csv_file.read().decode('utf-8-sig')
+                    except UnicodeDecodeError:
+                        messages.error(request, "Couldn't read that file. Please save it as UTF-8 CSV and try again.")
+                    else:
+                        reader = csv.DictReader(StringIO(decoded))
+                        # Normalize header list for checking
+                        raw_headers = reader.fieldnames or []
+                        headers_normalized = {h.strip().lower() for h in raw_headers}
+
+                        if not {'name', 'jersey_number'}.issubset(headers_normalized):
+                            messages.error(request, "CSV must include 'name' and 'jersey_number' columns.")
+                        else:
+                            valid_positions = {c[0] for c in Player.Position.choices}
+                            existing_jerseys = set(
+                                Player.objects.filter(team=team, tournament=tournament)
+                                .values_list('jersey_number', flat=True)
+                            )
+                            seen_in_file = set()
+                            to_create = []
+                            errors = []
+
+                            for i, row in enumerate(reader, start=2):  # Row 2 = first data row
+                                # Safely clean keys & values to support mismatched casing in original headers
+                                cleaned_row = {k.strip().lower(): (v or '').strip() for k, v in row.items() if k}
+
+                                name = cleaned_row.get('name', '')
+                                jersey_raw = cleaned_row.get('jersey_number', '')
+                                position = cleaned_row.get('position', '').upper()
+                                national_id = cleaned_row.get('national_id', '')
+
+                                if not name or not jersey_raw:
+                                    errors.append(f"Row {i}: missing name or jersey number.")
+                                    continue
+                                try:
+                                    jersey = int(jersey_raw)
+                                except ValueError:
+                                    errors.append(f"Row {i}: jersey number '{jersey_raw}' is not a whole number.")
+                                    continue
+                                if jersey in existing_jerseys or jersey in seen_in_file:
+                                    errors.append(f"Row {i}: jersey #{jersey} is already taken.")
+                                    continue
+                                if position and position not in valid_positions:
+                                    errors.append(f"Row {i}: unknown position '{position}' - left blank.")
+                                    position = ''
+
+                                to_create.append(Player(
+                                    team=team,
+                                    tournament=tournament,
+                                    name=name,
+                                    jersey_number=jersey,
+                                    position=position,
+                                    national_id=national_id,
+                                    created_by=request.user,
+                                ))
+                                seen_in_file.add(jersey)
+
+                            if to_create:
+                                Player.objects.bulk_create(to_create)
+                                log_audit_action(
+                                    request.user, AuditLog.Action.CREATE, team, request=request,
+                                    changes={'bulk_players_added': len(to_create)}
+                                )
+                                messages.success(
+                                    request,
+                                    f"Added {len(to_create)} player{'s' if len(to_create) != 1 else ''} from CSV."
+                                )
+                            if errors:
+                                preview = " | ".join(errors[:10])
+                                more = f" (+{len(errors) - 10} more)" if len(errors) > 10 else ""
+                                messages.warning(request, f"{len(errors)} row(s) skipped: {preview}{more}")
+
         return redirect(redirect_url)
 
-    tournament_filter = {'tournament': phase.tournament} if phase else {}
-    players = Player.objects.filter(team=team, **tournament_filter).order_by('jersey_number')
+    # Filtering team players based on determined tournament context
+    tournament_filter = {'tournament': tournament} if tournament else {}
+    players = Player.objects.filter(team=team, **tournament_filter).order_by('jersey_number', 'name')
     squad_goals = players.aggregate(total=Sum('goals'))['total'] or 0
 
     fixtures_qs = Fixture.objects.filter(
@@ -2525,12 +3113,13 @@ def subcounty_manage_team(request, pk):
         Q(phase_sport__phase__sub_county=sub_county) | Q(phase_sport__phase__ward__sub_county=sub_county)
     ).select_related(
         'home_team', 'away_team', 'phase_sport__sport', 'phase_sport__phase', 'result'
-    ).distinct().order_by('-kickoff_at')
+    ).distinct().order_by('-kickoff_at', '-round_number')
 
     context = {
         'active_nav': 'tournament',
         'team': team,
         'phase': phase,
+        'tournament': tournament,
         'players': players,
         'squad_goals': squad_goals,
         'positions': Player.Position.choices,
@@ -2596,11 +3185,12 @@ def SubcountyPhaseTeamSelectView(request, phase_pk):
             source_entry = feeder_entries.filter(team_id=team_id).first()
             if not source_entry:
                 continue
-            _, was_created = PhaseEntry.objects.get_or_create(
+            phase_entry, was_created = PhaseEntry.objects.get_or_create(
                 phase=phase, team_id=team_id,
                 defaults={'promoted_from': source_entry, 'registered_by': request.user},
             )
             if was_created:
+                log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
                 created += 1
 
         messages.success(request, f'{created} team{"s" if created != 1 else ""} advanced into {phase}.')
@@ -2661,51 +3251,76 @@ def SubcountyResultEntryView(request, fixture_pk):
     away_players = Player.objects.filter(tournament=tournament, team=fixture.away_team).order_by('jersey_number')
 
     result = Result.objects.filter(fixture=fixture).first()
+
+    # Query existing Goals
     existing_goals = Goal.objects.filter(fixture=fixture).select_related('scorer', 'assisted_by') if result else []
     existing_home_goals = [g for g in existing_goals if g.scorer.team_id == fixture.home_team_id]
     existing_away_goals = [g for g in existing_goals if g.scorer.team_id == fixture.away_team_id]
+
+    # Query existing Cards (Assuming Booking model)
+    existing_cards = Card.objects.filter(fixture=fixture).select_related('player') if result else []
+    existing_home_cards = [c for c in existing_cards if c.player.team_id == fixture.home_team_id]
+    existing_away_cards = [c for c in existing_cards if c.player.team_id == fixture.away_team_id]
 
     if request.method == 'POST':
         home_score = int(request.POST.get('home_score') or 0)
         away_score = int(request.POST.get('away_score') or 0)
 
-        if result:
-            result.home_score = home_score
-            result.away_score = away_score
-            result.save()
-        else:
-            result = Result.objects.create(
-                fixture=fixture, home_score=home_score, away_score=away_score, entered_by=request.user
-            )
+        with transaction.atomic():
+            if result:
+                result.home_score = home_score
+                result.away_score = away_score
+                result.save()
+            else:
+                result = Result.objects.create(
+                    fixture=fixture, home_score=home_score, away_score=away_score, entered_by=request.user
+                )
 
-        fixture.status = Fixture.Status.COMPLETED
-        fixture.save(update_fields=['status'])
-        log_audit_action(request.user, AuditLog.Action.UPDATE, fixture, request=request)
+            fixture.status = Fixture.Status.COMPLETED
+            fixture.save(update_fields=['status'])
+            log_audit_action(request.user, AuditLog.Action.UPDATE, fixture, request=request)
 
-        Goal.objects.filter(fixture=fixture).delete()
-        scorer_ids = request.POST.getlist('scorer')
-        assist_ids = request.POST.getlist('assisted_by')
-        minutes = request.POST.getlist('minute')
-        for scorer_id, assist_id, minute in zip(scorer_ids, assist_ids, minutes):
-            if not scorer_id:
-                continue
-            Goal.objects.create(
-                fixture=fixture, scorer_id=scorer_id, assisted_by_id=assist_id or None, minute=minute or None,
-            )
+            # --- Save Goals ---
+            Goal.objects.filter(fixture=fixture).delete()
+            scorer_ids = request.POST.getlist('scorer')
+            assist_ids = request.POST.getlist('assisted_by')
+            minutes = request.POST.getlist('minute')
+            for scorer_id, assist_id, minute in zip(scorer_ids, assist_ids, minutes):
+                if not scorer_id:
+                    continue
+                Goal.objects.create(
+                    fixture=fixture, scorer_id=scorer_id, assisted_by_id=assist_id or None, minute=minute or None,
+                )
+
+            # --- Save Cards / Bookings ---
+            Card.objects.filter(fixture=fixture).delete()
+            card_players = request.POST.getlist('card_player')
+            card_types = request.POST.getlist('card_type')
+            card_minutes = request.POST.getlist('card_minute')
+            for player_id, c_type, c_minute in zip(card_players, card_types, card_minutes):
+                if not player_id or not c_type:
+                    continue
+                Card.objects.create(
+                    fixture=fixture,
+                    player_id=player_id,
+                    card_type=c_type,
+                    minute=c_minute or None
+                )
 
         messages.success(request, f'Result saved for {fixture}.')
-        return redirect('subcounty_phase_detail', pk=fixture.phase_sport.phase_id)
+        return redirect('subcounty_phase_detail', phase_id=fixture.phase_sport.phase_id)
 
-    return render(request, 'subcounty/subcounty_result_entry.html', {
+    return render(request, 'subcounty/subcountyadmin_result_entry.html', {
         'fixture': fixture,
         'result': result,
         'home_players': home_players,
         'away_players': away_players,
         'existing_home_goals': existing_home_goals,
         'existing_away_goals': existing_away_goals,
-        'active_nav': 'tournaments',
+        'existing_home_cards': existing_home_cards,
+        'existing_away_cards': existing_away_cards,
+        'active_nav': 'phases',
     })
-
 
 @subcounty_admin_required
 @login_required(login_url='login_admin')
@@ -2921,3 +3536,75 @@ def subcounty_account_settings(request):
         'password_form': password_form,
     }
     return render(request, 'subcounty/account.html', context)
+
+
+@subcounty_admin_required
+@login_required
+def subcounty_tournament(request):
+    if not hasattr(request.user, 'sub_county') or not request.user.sub_county:
+        return redirect('login')
+    sub_county = request.user.sub_county
+
+    if request.method == 'POST':
+        form = SubcountyTournamentForm(request.POST, user=request.user)
+        if form.is_valid():
+            tournament = form.save(commit=False)
+            tournament.sub_county = sub_county
+            tournament.created_by = request.user
+            tournament.save()
+            form.save_m2m()
+
+            phase = Phase.objects.create(
+                tournament=tournament,
+                sub_county=sub_county,
+                stage='sub_county',
+                status=tournament.status,
+            )
+
+            log_audit_action(request.user, AuditLog.Action.CREATE, tournament, request=request)
+            messages.success(request, f'"{tournament.name}" was created for {sub_county.name} Ward.')
+            return redirect(f"{request.path}?phase_id={phase.pk}")
+        else:
+            print('Ward tournament form errors:', form.errors.as_json())
+    else:
+        form = SubcountyTournamentForm(user=request.user)
+        my_wards = Ward.objects.filter(sub_county=sub_county)
+
+        # 1. Fetch tournaments that have phases involving this sub-county or its wards
+        tournaments = Tournament.objects.filter(
+            Q(phases__sub_county=sub_county) | Q(phases__ward__in=my_wards)
+        ).distinct().order_by('-season', 'name')
+
+        # Apply search/filters
+        search_query = request.GET.get('search', '')
+        if search_query:
+            tournaments = tournaments.filter(
+                Q(name__icontains=search_query) | Q(season__icontains=search_query)
+            ).distinct()
+
+        # 2. Count metrics specifically for this Sub-County scope
+        active_ward_phases = Phase.objects.filter(
+            stage=Phase.Stage.WARD,
+            ward__in=my_wards,
+            status=Phase.Status.ONGOING
+        ).count()
+
+        active_subcounty_phases = Phase.objects.filter(
+            stage=Phase.Stage.SUB_COUNTY,
+            sub_county=sub_county,
+            status=Phase.Status.ONGOING
+        ).count()
+
+        total_wards_count = my_wards.count()
+
+        context = {
+            'form': form,
+            'active_nav': 'tournament',
+            'sub_county': sub_county,
+            'tournaments': tournaments,
+            'active_ward_phases': active_ward_phases,
+            'active_subcounty_phases': active_subcounty_phases,
+            'total_wards_count': total_wards_count,
+            'search_query': search_query,
+        }
+    return render(request, 'subcounty/tournament.html', context)

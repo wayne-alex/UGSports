@@ -61,7 +61,6 @@ urlpatterns = [
     #     Ward admin
     path('ward/dashboard/', views.ward_dashboard, name='ward_dashboard'),
 
-    path('ward/tournament/', views.ward_tournament, name='ward_tournament'),
     path('ward/teams/<int:pk>/manage/', views.ward_manage_team, name='ward_manage_team'),
     path('ward/fixtures/<int:pk>/edit/', views.ward_edit_fixture_view, name='ward_edit_fixture'),
     path('ward/fixtures/<int:fixture_pk>/result/', views.ward_ResultEntryView, name='ward_result_entry'),
@@ -76,6 +75,14 @@ urlpatterns = [
     path('ward/news/<int:pk>/edit/', views.news_edit, name='ward_news_edit'),
     path('ward/news/<int:pk>/delete/', views.news_delete, name='ward_news_delete'),
     path('ward/comment/<int:pk>/delete/', views.news_comment_delete, name='news_comment_delete'),
+    path('ward/tournament/', views.ward_tournament, name='ward_tournament'),
+    path('ward/tournament/<int:pk>/edit/', views.ward_tournament_edit, name='ward_tournament_edit'),
+    path('ward/tournament/<int:pk>/delete/', views.ward_tournament_delete, name='ward_tournament_delete'),
+    path('ward/tournament/<int:tournament_pk>/phase/create/', views.ward_phase_create, name='ward_phase_create'),
+    path('ward/phase/<int:pk>/edit/', views.ward_phase_edit, name='ward_phase_edit'),
+    path('ward/phase/<int:pk>/delete/', views.ward_phase_delete, name='ward_phase_delete'),
+    path('ward/phase-sports/<int:phase_pk>/fixtures/new/', views.FixtureCreateView, name='ward_fixture_create'),
+
     #     Sub County
     path('subcounty/dashboard/', views.subcounty_dashboard, name='subcounty_dashboard'),
     path('subcounty/tournaments/', views.subcounty_tournament, name='subcounty_tournament'),
@@ -104,5 +111,11 @@ urlpatterns = [
          name='subconty_promote_team'),
     path('subcounty/fixtures/<int:fixture_pk>/result/', views.SubcountyResultEntryView, name='subcounty_result_entry'),
     path('subcounty/fixtures/<int:pk>/edit/', views.Subcountyedit_fixture_view, name='subcounty_edit_fixture'),
+    path('subcounty/tournaments/<int:tournament_pk>/phases/new/', views.SubcountyPhaseCreateView,
+         name='subcounty_phase_create'),
+    path('subcounty/phase-sports/<int:phase_pk>/fixtures/new/', views.SubcountyFixtureCreateView,
+         name='subcounty_fixture_create'),
+    path('subcounty/phase/<int:pk>/edit/', views.SubcountyPhaseEditView, name='subcounty_phase_edit'),
+    path('subcounty/phase/<int:pk>/delete/', views.SubcountyPhaseDeleteView, name='subcounty_phase_delete'),
 
 ]

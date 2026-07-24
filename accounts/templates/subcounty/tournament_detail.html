@@ -2,17 +2,22 @@
 {% block title %}{{ tournament.name }} | {{ sub_county.name }}{% endblock %}
 {% block page_eyebrow %}{{ tournament.season }} Season{% endblock %}
 {% block page_title %}{{ tournament.name }}{% endblock %}
+{% block header_actions %}
 
+    <a href="{% url 'subcounty_tournament' %}" class="btn-ghost">Back to List</a>
+
+{% endblock %}
 {% block content %}
 
 <div class="group-header-row">
     <h3 class="group-header">Sub-County &amp; Ward Phases</h3>
-    <a href="{% url 'subcounty_tournament' %}" class="btn-ghost">Back to List</a>
-</div>
+    </div>
 
 <!-- 1. The Sub-County Championship Phase -->
 <div class="group-header-row" style="margin-top:20px;">
     <h3 class="group-header">Sub-County Level Playoff</h3>
+        <a href="{% url 'subcounty_phase_create' tournament.pk %}?stage=sub_county" class="btn-ghost">+ Add Sub-County Phase</a>
+
 </div>
 <div class="group">
     {% if sub_county_phase %}
@@ -57,6 +62,8 @@
 <!-- 2. Individual Ward Qualifications -->
 <div class="group-header-row" style="margin-top:28px;">
     <h3 class="group-header">Ward Qualifications</h3>
+        <a href="{% url 'subcounty_phase_create' tournament.pk %}?stage=ward" class="btn-ghost">+ Add Ward Phase</a>
+
 </div>
 <div class="group">
     {% for phase in ward_phases %}

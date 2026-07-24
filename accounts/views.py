@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 from datetime import timedelta
 from io import StringIO
 from itertools import combinations
@@ -12,7 +13,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
-from django.db.models import ProtectedError, Count, Model
+from django.db.models import ProtectedError, Count, Exists, OuterRef
 from django.forms.models import model_to_dict
 from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
@@ -24,8 +25,8 @@ from django.views.decorators.http import require_POST
 from accounts.decorators import superadmin_admin_required, ward_admin_required, subcounty_admin_required
 from accounts.fixture_generator import FixtureGenerator
 from accounts.forms import TournamentForm, PlayerForm, TeamForm, PhaseForm, FixtureGenerationForm, FixtureEditForm, \
-    ProfileForm, WardAdminProfileForm, FixtureForm, WardTournamentForm, SubcountyTeamForm, SubcountyTournamentForm, \
-    SingleFixtureForm
+    ProfileForm, WardAdminProfileForm, FixtureForm, SubcountyTeamForm, SubcountyTournamentForm, \
+    SingleFixtureForm, SubCountyPhaseForm, WardPhaseForm, WardTournamentForm
 from accounts.models import AuditLog, Sport, SubCounty, Ward, NewsPost, NewsComment, Tournament, Team, Player, Result, \
     Phase, PhaseEntry, Fixture, PhaseSport, Goal, User, Card, Group
 from accounts.services import resolve_next_round, create_next_round_fixtures
@@ -761,7 +762,7 @@ def TeamCreateView(request, phase_pk):
         log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
         phase_entry = PhaseEntry.objects.create(phase=phase, team=team, registered_by=request.user)
         log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
-        return redirect('phase_detail',pk=phase.pk)
+        return redirect('phase_detail', pk=phase.pk)
 
     else:
         form = TeamForm(initial={'ward': phase.ward})
@@ -1457,7 +1458,8 @@ def manage_team(request, pk):
                 except ValueError:
                     messages.error(request, "Jersey number must be a whole number.")
                 else:
-                    if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exclude(pk=player.pk).exists():
+                    if Player.objects.filter(team=team, tournament=tournament, jersey_number=jersey).exclude(
+                            pk=player.pk).exists():
                         messages.error(request, f"Jersey number #{jersey} is already taken on this team.")
                     else:
                         # Handle singular captain policy
@@ -1537,7 +1539,7 @@ def manage_team(request, pk):
                                     team=team, tournament=tournament, name=name,
                                     jersey_number=jersey, position=position,
                                     national_id=national_id, created_by=request.user,
-                                    is_captain=False # CSV bulk creates are not marked as captain by default
+                                    is_captain=False  # CSV bulk creates are not marked as captain by default
                                 ))
                                 seen_in_file.add(jersey)
 
@@ -1738,6 +1740,8 @@ def ward_dashboard(request):
 @ward_admin_required
 @login_required
 def ward_tournament(request):
+    """Tournament list + create panel. No auto-phase creation here anymore —
+    phases are created explicitly per tournament via ward_phase_create."""
     if not hasattr(request.user, 'ward') or not request.user.ward:
         return redirect('login')
     ward = request.user.ward
@@ -1751,35 +1755,44 @@ def ward_tournament(request):
             tournament.created_by = request.user
             tournament.save()
             form.save_m2m()
-
-            phase = Phase.objects.create(
-                tournament=tournament,
-                ward=ward,
-                stage='ward',
-                status=tournament.status,
-            )
-
             log_audit_action(request.user, AuditLog.Action.CREATE, tournament, request=request)
-            messages.success(request, f'"{tournament.name}" was created for {ward.name} Ward.')
-            return redirect(f"{request.path}?phase_id={phase.pk}")
+            messages.success(request, f'"{tournament.name}" was created. Now create a phase to start managing it.')
+            return redirect(f"{request.path}?tournament_id={tournament.pk}")
         else:
             print('Ward tournament form errors:', form.errors.as_json())
     else:
         form = WardTournamentForm()
 
-    ward_phases = Phase.objects.filter(ward=ward).select_related('tournament').order_by('-status', '-id')
+    ward_tournaments = Tournament.objects.filter(ward=ward).order_by('-season', 'name')
+    ward_phases_qs = Phase.objects.filter(ward=ward).select_related('tournament')
+    phases_by_tournament = {p.tournament_id: p for p in ward_phases_qs}
+
     phase_id = request.GET.get('phase_id')
+    tournament_id = request.GET.get('tournament_id')
     selected_phase = None
+    selected_tournament = None
+
     if phase_id:
         selected_phase = get_object_or_404(Phase, pk=phase_id, ward=ward)
-    elif ward_phases.exists():
-        selected_phase = ward_phases.filter(status='ongoing').first() or ward_phases.first()
+        selected_tournament = selected_phase.tournament
+    elif tournament_id:
+        selected_tournament = get_object_or_404(Tournament, pk=tournament_id, ward=ward)
+        selected_phase = phases_by_tournament.get(selected_tournament.pk)
+    else:
+        ongoing = ward_phases_qs.filter(status='ongoing').first()
+        selected_phase = ongoing or ward_phases_qs.order_by('-id').first()
+        if selected_phase:
+            selected_tournament = selected_phase.tournament
+        elif ward_tournaments.exists():
+            selected_tournament = ward_tournaments.first()
 
     context = {
         'active_nav': 'tournament',
         'ward': ward,
-        'ward_phases': ward_phases,
+        'ward_tournaments': ward_tournaments,
+        'phases_by_tournament': phases_by_tournament,
         'selected_phase': selected_phase,
+        'selected_tournament': selected_tournament,
         'form': form,
         'open_form_panel': request.method == 'POST',
         'teams': [], 'fixtures': [], 'results': [],
@@ -1789,7 +1802,6 @@ def ward_tournament(request):
 
     if selected_phase:
         teams = Team.objects.filter(phase_entries__phase=selected_phase, ward=ward).distinct().order_by('name')
-
         tournament_sports = selected_phase.tournament.sports.filter(is_active=True).order_by('name')
         existing_phase_sports = {
             ps.sport_id: ps
@@ -1799,25 +1811,19 @@ def ward_tournament(request):
             {'sport': sport, 'phase_sport': existing_phase_sports.get(sport.id)}
             for sport in tournament_sports
         ]
-
         fixtures = Fixture.objects.filter(phase_sport__phase=selected_phase).select_related(
             'home_team', 'away_team', 'phase_sport__sport', 'result'
         ).order_by('kickoff_at', 'id')
-
         postponed_fixtures = fixtures.filter(status='postponed')
         active_fixtures = fixtures.exclude(status='postponed')
-
         fixtures_by_sport = defaultdict(list)
         for f in active_fixtures:
             fixtures_by_sport[f.phase_sport.sport_id].append(f)
-
         fixture_dates = sorted({f.kickoff_at.date() for f in active_fixtures if f.kickoff_at})
         has_unscheduled = active_fixtures.filter(kickoff_at__isnull=True).exists()
-
         results = Result.objects.filter(fixture__phase_sport__phase=selected_phase).select_related(
             'fixture__home_team', 'fixture__away_team', 'fixture__phase_sport__sport'
         ).order_by('-entered_at')
-
         context.update({
             'teams': teams,
             'sport_rows': sport_rows,
@@ -1828,8 +1834,132 @@ def ward_tournament(request):
             'has_unscheduled': has_unscheduled,
             'postponed_fixtures': postponed_fixtures,
         })
-
     return render(request, 'ward/ward_tournament.html', context)
+
+
+@ward_admin_required
+@login_required
+def ward_tournament_edit(request, pk):
+    ward = request.user.ward
+    tournament = get_object_or_404(Tournament, pk=pk, ward=ward)
+
+    if request.method == 'POST':
+        form = WardTournamentForm(request.POST, instance=tournament)
+        if form.is_valid():
+            form.save()
+            log_audit_action(request.user, AuditLog.Action.UPDATE, tournament, request=request)
+            messages.success(request, f'"{tournament.name}" was updated.')
+            return redirect(f"{reverse('ward_tournament')}?tournament_id={tournament.pk}")
+    else:
+        form = WardTournamentForm(instance=tournament)
+
+    return render(request, 'ward/ward_tournament_form.html', {
+        'form': form,
+        'tournament': tournament,
+        'active_nav': 'tournament',
+    })
+
+
+@ward_admin_required
+@login_required
+@require_POST
+def ward_tournament_delete(request, pk):
+    ward = request.user.ward
+    tournament = get_object_or_404(Tournament, pk=pk, ward=ward)
+    name = tournament.name
+
+    log_audit_action(request.user, AuditLog.Action.DELETE, tournament, request=request)
+    tournament.delete()
+
+    messages.success(request, f'"{name}" was deleted.')
+    return redirect('ward_tournament')
+
+
+@ward_admin_required
+@login_required
+def ward_phase_create(request, tournament_pk):
+    ward = request.user.ward
+    tournament = get_object_or_404(Tournament, pk=tournament_pk, ward=ward)
+
+    if request.method == 'POST':
+        form = WardPhaseForm(request.POST, tournament=tournament, user=request.user)
+        if form.is_valid():
+            phase = form.save(commit=False)
+            phase.tournament = tournament
+            phase.created_by = request.user
+            phase.save()
+
+            selected_format = form.cleaned_data['fixture_format']
+            selected_legs = form.cleaned_data['legs']
+            for sport in tournament.sports.all():
+                PhaseSport.objects.get_or_create(
+                    phase=phase,
+                    sport=sport,
+                    defaults={'fixture_format': selected_format, 'legs': selected_legs},
+                )
+
+            log_audit_action(request.user, AuditLog.Action.CREATE, phase, request=request)
+            messages.success(request, f'{phase} was created.')
+            return redirect(f"{reverse('ward_tournament')}?phase_id={phase.pk}")
+    else:
+        form = WardPhaseForm(tournament=tournament, user=request.user)
+
+    return render(request, 'ward/ward_phase_form.html', {
+        'form': form,
+        'tournament': tournament,
+        'active_nav': 'tournament',
+    })
+
+
+@ward_admin_required
+@login_required
+def ward_phase_edit(request, pk):
+    ward = request.user.ward
+    phase = get_object_or_404(Phase, pk=pk, ward=ward)
+    tournament = phase.tournament
+
+    if request.method == 'POST':
+        form = WardPhaseForm(request.POST, instance=phase, tournament=tournament, user=request.user)
+        if form.is_valid():
+            phase = form.save(commit=False)
+            phase.save()
+
+            selected_format = form.cleaned_data.get('fixture_format')
+            selected_legs = form.cleaned_data.get('legs')
+            if selected_format and selected_legs:
+                PhaseSport.objects.filter(phase=phase).update(
+                    fixture_format=selected_format,
+                    legs=selected_legs,
+                )
+
+            log_audit_action(request.user, AuditLog.Action.UPDATE, phase, request=request)
+            messages.success(request, f'{phase} was updated.')
+            return redirect(f"{reverse('ward_tournament')}?phase_id={phase.pk}")
+    else:
+        form = WardPhaseForm(instance=phase, tournament=tournament, user=request.user)
+
+    return render(request, 'ward/ward_phase_form.html', {
+        'form': form,
+        'tournament': tournament,
+        'phase': phase,
+        'active_nav': 'tournament',
+    })
+
+
+@ward_admin_required
+@login_required
+@require_POST
+def ward_phase_delete(request, pk):
+    ward = request.user.ward
+    phase = get_object_or_404(Phase, pk=pk, ward=ward)
+    tournament_pk = phase.tournament_id
+    label = str(phase)
+
+    log_audit_action(request.user, AuditLog.Action.DELETE, phase, request=request)
+    phase.delete()
+
+    messages.success(request, f'"{label}" was deleted.')
+    return redirect(f"{reverse('ward_tournament')}?tournament_id={tournament_pk}")
 
 
 @ward_admin_required
@@ -2290,21 +2420,18 @@ def ward_TeamCreateView(request, phase_pk):
                 log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
             messages.success(request, "Bulk teams imported successfully.")
             return redirect('ward_dashboard')
-
-        # 2. Handle Single Form
-        form = TeamForm(request.POST)
-        # Manually inject the ward since it's disabled in the form
-        if form.is_valid():
-            team = form.save(commit=False)
-            team.ward = phase.ward
-            team.created_by = request.user
-            team.save()
-            log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
-            phase_entry = PhaseEntry.objects.create(phase=phase, team=team, registered_by=request.user)
-            log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
-            return redirect("ward_dashboard")
-        form = TeamForm(initial={'ward': phase.ward})
-
+    form = TeamForm(request.POST)
+    # Manually inject the ward since it's disabled in the form
+    if form.is_valid():
+        team = form.save(commit=False)
+        team.ward = phase.ward
+        team.created_by = request.user
+        team.save()
+        log_audit_action(request.user, AuditLog.Action.CREATE, team, request=request)
+        phase_entry = PhaseEntry.objects.create(phase=phase, team=team, registered_by=request.user)
+        log_audit_action(request.user, AuditLog.Action.CREATE, phase_entry, request=request)
+        return redirect("ward_dashboard")
+    form = TeamForm(initial={'ward': phase.ward})
     return render(request, 'ward/wardadmin_team_form.html', {'form': form, 'phase': phase})
 
 
@@ -2536,8 +2663,92 @@ def ward_account_settings(request):
     }
     return render(request, 'ward/account.html', context)
 
+@ward_admin_required
+@login_required(login_url='login_admin')
+def FixtureCreateView(request, phase_pk):
+    phase = get_object_or_404(Phase, pk=phase_pk)
+    phase_sport = get_object_or_404(PhaseSport, phase=phase)
+
+    if request.method == 'POST':
+
+        # 1. Create a group/round label — used for both pools (A, B, C…) and
+        #    knockout rounds (QF, SF, Final). Fixture.group just needs a name to point at.
+        if 'group_name' in request.POST:
+            name = request.POST.get('group_name', '').strip()
+            if not name:
+                messages.error(request, "Group name is required.")
+            else:
+                group, was_created = Group.objects.get_or_create(phase_sport=phase_sport, name=name)
+                if was_created:
+                    log_audit_action(request.user, AuditLog.Action.CREATE, group, request=request)
+                    messages.success(request, f"Group '{name}' created.")
+                else:
+                    messages.info(request, f"Group '{name}' already exists.")
+            return redirect('ward_fixture_create', phase_pk=phase.pk)
+
+        # 2. Bulk CSV import — columns: group,home_team,away_team,round_number,venue,kickoff_at
+        if 'csv_file' in request.FILES:
+            data = request.FILES['csv_file'].read().decode('utf-8')
+            reader = csv.DictReader(io.StringIO(data))
+            entry_qs = PhaseEntry.objects.filter(phase=phase).select_related('team')
+            teams_by_name = {e.team.name.strip().lower(): e.team for e in entry_qs}
+            groups_by_name = {g.name.strip().lower(): g for g in phase_sport.groups.all()}
+            created, errors = 0, []
+            with transaction.atomic():
+                for i, row in enumerate(reader, start=2):
+                    try:
+                        home = teams_by_name[row['home_team'].strip().lower()]
+                        away = teams_by_name[row['away_team'].strip().lower()]
+                        group = groups_by_name.get((row.get('group') or '').strip().lower())
+                        if home == away:
+                            raise ValueError("home_team and away_team are the same")
+                        fixture = Fixture(
+                            phase_sport=phase_sport,
+                            group=group,
+                            home_team=home,
+                            away_team=away,
+                            round_number=int(row['round_number']),
+                            venue=row.get('venue') or (group.name if group else ''),
+                            status=Fixture.Status.SCHEDULED,
+                        )
+                        fixture.full_clean()
+                        fixture.save()
+                        log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
+                        created += 1
+                    except KeyError as e:
+                        errors.append(f"Row {i}: unmatched team/column {e}")
+                    except Exception as e:
+                        errors.append(f"Row {i}: {e}")
+                if errors and not created:
+                    transaction.set_rollback(True)
+            for err in errors[:20]:
+                messages.warning(request, err)
+            if created:
+                messages.success(request, f"{created} fixtures imported.")
+            return redirect('ward_phase_detail', pk=phase.pk)
+
+        # 3. Single fixture form
+        form = SingleFixtureForm(request.POST, phase_sport=phase_sport)
+        if form.is_valid():
+            fixture = form.save(commit=False)
+            fixture.phase_sport = phase_sport
+            fixture.save()
+            log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
+            messages.success(request, "Fixture added.")
+            return redirect('ward_phase_detail', pk=phase.pk)
+    else:
+        form = SingleFixtureForm(phase_sport=phase_sport)
+
+    return render(request, 'ward/wardadmin_fixture_create.html', {
+        'form': form,
+        'phase_sport': phase_sport,
+        'groups': Group.objects.filter(phase_sport=phase_sport),
+        'phase': phase,
+    })
+
 
 # SUB COUNTY
+
 @subcounty_admin_required
 def subcounty_dashboard(request):
     sub_county = request.user.sub_county
@@ -2569,50 +2780,6 @@ def subcounty_dashboard(request):
         'pending_results_count': pending_results_count,
     }
     return render(request, 'subcounty/subcountyadmin_dashboard.html', context)
-
-
-@subcounty_admin_required
-def subcounty_tournament(request):
-    sub_county = request.user.sub_county
-    my_wards = Ward.objects.filter(sub_county=sub_county)
-
-    # 1. Fetch tournaments that have phases involving this sub-county or its wards
-    tournaments = Tournament.objects.filter(
-        Q(phases__sub_county=sub_county) | Q(phases__ward__in=my_wards)
-    ).distinct().order_by('-season', 'name')
-
-    # Apply search/filters
-    search_query = request.GET.get('search', '')
-    if search_query:
-        tournaments = tournaments.filter(
-            Q(name__icontains=search_query) | Q(season__icontains=search_query)
-        ).distinct()
-
-    # 2. Count metrics specifically for this Sub-County scope
-    active_ward_phases = Phase.objects.filter(
-        stage=Phase.Stage.WARD,
-        ward__in=my_wards,
-        status=Phase.Status.ONGOING
-    ).count()
-
-    active_subcounty_phases = Phase.objects.filter(
-        stage=Phase.Stage.SUB_COUNTY,
-        sub_county=sub_county,
-        status=Phase.Status.ONGOING
-    ).count()
-
-    total_wards_count = my_wards.count()
-
-    context = {
-        'active_nav': 'tournament',
-        'sub_county': sub_county,
-        'tournaments': tournaments,
-        'active_ward_phases': active_ward_phases,
-        'active_subcounty_phases': active_subcounty_phases,
-        'total_wards_count': total_wards_count,
-        'search_query': search_query,
-    }
-    return render(request, 'subcounty/tournament.html', context)
 
 
 @subcounty_admin_required
@@ -3320,6 +3487,7 @@ def SubcountyResultEntryView(request, fixture_pk):
         'active_nav': 'phases',
     })
 
+
 @subcounty_admin_required
 @login_required(login_url='login_admin')
 def Subcountyedit_fixture_view(request, pk):
@@ -3541,7 +3709,9 @@ def subcounty_account_settings(request):
 def subcounty_tournament(request):
     if not hasattr(request.user, 'sub_county') or not request.user.sub_county:
         return redirect('login')
+
     sub_county = request.user.sub_county
+    my_wards = Ward.objects.filter(sub_county=sub_county)
 
     if request.method == 'POST':
         form = SubcountyTournamentForm(request.POST, user=request.user)
@@ -3551,58 +3721,237 @@ def subcounty_tournament(request):
             tournament.created_by = request.user
             tournament.save()
             form.save_m2m()
-
-            phase = Phase.objects.create(
-                tournament=tournament,
-                sub_county=sub_county,
-                stage='sub_county',
-                status=tournament.status,
-            )
-
             log_audit_action(request.user, AuditLog.Action.CREATE, tournament, request=request)
             messages.success(request, f'"{tournament.name}" was created for {sub_county.name} Ward.')
-            return redirect(f"{request.path}?phase_id={phase.pk}")
+            return redirect(request.path)
         else:
             print('Ward tournament form errors:', form.errors.as_json())
     else:
         form = SubcountyTournamentForm(user=request.user)
-        my_wards = Ward.objects.filter(sub_county=sub_county)
 
-        # 1. Fetch tournaments that have phases involving this sub-county or its wards
-        tournaments = Tournament.objects.filter(
-            Q(phases__sub_county=sub_county) | Q(phases__ward__in=my_wards)
-        ).distinct().order_by('-season', 'name')
+    # --- Tournament list: show ALL tournaments relevant to this admin, ---
+    # --- including ones with no phase yet in their scope (so they can  ---
+    # --- be the ones to create the first phase for it).                ---
+    scoped_phase_qs = Phase.objects.filter(
+        Q(sub_county=sub_county) | Q(ward__in=my_wards)
+    )
+    tournaments = Tournament.objects.annotate(
+        has_scoped_phase=Exists(scoped_phase_qs.filter(tournament=OuterRef('pk')))
+    ).order_by('-season', 'name')
 
-        # Apply search/filters
-        search_query = request.GET.get('search', '')
-        if search_query:
-            tournaments = tournaments.filter(
-                Q(name__icontains=search_query) | Q(season__icontains=search_query)
-            ).distinct()
+    # Apply search/filters
+    search_query = request.GET.get('search', '')
+    if search_query:
+        tournaments = tournaments.filter(
+            Q(name__icontains=search_query) | Q(season__icontains=search_query)
+        ).distinct()
 
-        # 2. Count metrics specifically for this Sub-County scope
-        active_ward_phases = Phase.objects.filter(
-            stage=Phase.Stage.WARD,
-            ward__in=my_wards,
-            status=Phase.Status.ONGOING
-        ).count()
+    # Metrics specific to this Sub-County scope
+    active_ward_phases = Phase.objects.filter(
+        stage=Phase.Stage.WARD,
+        ward__in=my_wards,
+        status=Phase.Status.ONGOING
+    ).count()
+    active_subcounty_phases = Phase.objects.filter(
+        stage=Phase.Stage.SUB_COUNTY,
+        sub_county=sub_county,
+        status=Phase.Status.ONGOING
+    ).count()
+    total_wards_count = my_wards.count()
 
-        active_subcounty_phases = Phase.objects.filter(
-            stage=Phase.Stage.SUB_COUNTY,
-            sub_county=sub_county,
-            status=Phase.Status.ONGOING
-        ).count()
-
-        total_wards_count = my_wards.count()
-
-        context = {
-            'form': form,
-            'active_nav': 'tournament',
-            'sub_county': sub_county,
-            'tournaments': tournaments,
-            'active_ward_phases': active_ward_phases,
-            'active_subcounty_phases': active_subcounty_phases,
-            'total_wards_count': total_wards_count,
-            'search_query': search_query,
-        }
+    context = {
+        'form': form,
+        'active_nav': 'tournament',
+        'sub_county': sub_county,
+        'tournaments': tournaments,
+        'active_ward_phases': active_ward_phases,
+        'active_subcounty_phases': active_subcounty_phases,
+        'total_wards_count': total_wards_count,
+        'search_query': search_query,
+    }
     return render(request, 'subcounty/tournament.html', context)
+
+
+@subcounty_admin_required
+@login_required(login_url='login_admin')
+def SubcountyPhaseCreateView(request, tournament_pk):
+    tournament = get_object_or_404(Tournament, pk=tournament_pk)
+    initial = {'stage': request.GET.get('stage', Phase.Stage.WARD)}
+    if request.method == 'POST':
+        form = SubCountyPhaseForm(
+            request.POST,
+            tournament=tournament,
+            user=request.user,
+        )
+        if form.is_valid():
+            phase = form.save(commit=False)
+            phase.tournament = tournament
+            phase.created_by = request.user
+            phase.save()
+            selected_format = form.cleaned_data['fixture_format']
+            selected_legs = form.cleaned_data['legs']
+            for sport in tournament.sports.all():
+                PhaseSport.objects.get_or_create(
+                    phase=phase,
+                    sport=sport,
+                    defaults={
+                        'fixture_format': selected_format,
+                        'legs': selected_legs,
+                    }
+                )
+            log_audit_action(request.user, AuditLog.Action.CREATE, phase, request=request)
+            messages.success(request, f'{phase} was created.')
+            return redirect('subcounty_phase_detail', pk=phase.pk)
+    else:
+        form = SubCountyPhaseForm(
+            initial=initial,
+            tournament=tournament,
+            user=request.user,
+        )
+    return render(request, 'subcounty/subcounty_phase_form.html', {
+        'form': form,
+        'tournament': tournament,
+        'active_nav': 'tournaments',
+    })
+
+
+@subcounty_admin_required
+@login_required(login_url='login_admin')
+def SubcountyPhaseEditView(request, pk):
+    phase = get_object_or_404(Phase, pk=pk)
+    tournament = phase.tournament
+
+    if request.method == 'POST':
+        form = SubCountyPhaseForm(
+            request.POST,
+            instance=phase,
+            tournament=tournament,
+            user=request.user,
+        )
+        if form.is_valid():
+            phase = form.save(commit=False)
+            phase.save()
+
+            selected_format = form.cleaned_data.get('fixture_format')
+            selected_legs = form.cleaned_data.get('legs')
+            if selected_format and selected_legs:
+                PhaseSport.objects.filter(phase=phase).update(
+                    fixture_format=selected_format,
+                    legs=selected_legs,
+                )
+
+            log_audit_action(request.user, AuditLog.Action.UPDATE, phase, request=request)
+            messages.success(request, f'{phase} was updated.')
+            return redirect('subcounty_phase_detail', pk=phase.pk)
+    else:
+        form = SubCountyPhaseForm(
+            instance=phase,
+            tournament=tournament,
+            user=request.user,
+        )
+
+    return render(request, 'subcounty/subcounty_phase_form.html', {
+        'form': form,
+        'tournament': tournament,
+        'phase': phase,
+        'active_nav': 'tournaments',
+    })
+
+
+@subcounty_admin_required
+@login_required(login_url='login_admin')
+@require_POST
+def SubcountyPhaseDeleteView(request, pk):
+    phase = get_object_or_404(Phase, pk=pk)
+    tournament_pk = phase.tournament_id
+    phase_label = str(phase)
+
+    log_audit_action(request.user, AuditLog.Action.DELETE, phase, request=request)
+    phase.delete()
+
+    messages.success(request, f'"{phase_label}" was deleted.')
+    return redirect('subcounty_tournament_detail', tournament_id=tournament_pk)
+
+
+@subcounty_admin_required
+@login_required(login_url='login_admin')
+def SubcountyFixtureCreateView(request, phase_pk):
+    phase = get_object_or_404(Phase, pk=phase_pk)
+    phase_sport = get_object_or_404(PhaseSport, phase=phase)
+
+    if request.method == 'POST':
+
+        # 1. Create a group/round label — used for both pools (A, B, C…) and
+        #    knockout rounds (QF, SF, Final). Fixture.group just needs a name to point at.
+        if 'group_name' in request.POST:
+            name = request.POST.get('group_name', '').strip()
+            if not name:
+                messages.error(request, "Group name is required.")
+            else:
+                group, was_created = Group.objects.get_or_create(phase_sport=phase_sport, name=name)
+                if was_created:
+                    log_audit_action(request.user, AuditLog.Action.CREATE, group, request=request)
+                    messages.success(request, f"Group '{name}' created.")
+                else:
+                    messages.info(request, f"Group '{name}' already exists.")
+            return redirect('subcounty_fixture_create', phase_pk=phase.pk)
+
+        # 2. Bulk CSV import — columns: group,home_team,away_team,round_number,venue,kickoff_at
+        if 'csv_file' in request.FILES:
+            data = request.FILES['csv_file'].read().decode('utf-8')
+            reader = csv.DictReader(io.StringIO(data))
+            entry_qs = PhaseEntry.objects.filter(phase=phase).select_related('team')
+            teams_by_name = {e.team.name.strip().lower(): e.team for e in entry_qs}
+            groups_by_name = {g.name.strip().lower(): g for g in phase_sport.groups.all()}
+            created, errors = 0, []
+            with transaction.atomic():
+                for i, row in enumerate(reader, start=2):
+                    try:
+                        home = teams_by_name[row['home_team'].strip().lower()]
+                        away = teams_by_name[row['away_team'].strip().lower()]
+                        group = groups_by_name.get((row.get('group') or '').strip().lower())
+                        if home == away:
+                            raise ValueError("home_team and away_team are the same")
+                        fixture = Fixture(
+                            phase_sport=phase_sport,
+                            group=group,
+                            home_team=home,
+                            away_team=away,
+                            round_number=int(row['round_number']),
+                            venue=row.get('venue') or (group.name if group else ''),
+                            status=Fixture.Status.SCHEDULED,
+                        )
+                        fixture.full_clean()
+                        fixture.save()
+                        log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
+                        created += 1
+                    except KeyError as e:
+                        errors.append(f"Row {i}: unmatched team/column {e}")
+                    except Exception as e:
+                        errors.append(f"Row {i}: {e}")
+                if errors and not created:
+                    transaction.set_rollback(True)
+            for err in errors[:20]:
+                messages.warning(request, err)
+            if created:
+                messages.success(request, f"{created} fixtures imported.")
+            return redirect('subcounty_phase_detail', pk=phase.pk)
+
+        # 3. Single fixture form
+        form = SingleFixtureForm(request.POST, phase_sport=phase_sport)
+        if form.is_valid():
+            fixture = form.save(commit=False)
+            fixture.phase_sport = phase_sport
+            fixture.save()
+            log_audit_action(request.user, AuditLog.Action.CREATE, fixture, request=request)
+            messages.success(request, "Fixture added.")
+            return redirect('subcounty_phase_detail', pk=phase.pk)
+    else:
+        form = SingleFixtureForm(phase_sport=phase_sport)
+
+    return render(request, 'subcounty/subcounty_fixture_create.html', {
+        'form': form,
+        'phase_sport': phase_sport,
+        'groups': Group.objects.filter(phase_sport=phase_sport),
+        'phase': phase,
+    })
